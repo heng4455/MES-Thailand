@@ -1,0 +1,46 @@
+{
+  "name": "mes-thailand",
+  "version": "1.0.0",
+  "description": "설치형 기초 MES (Manufacturing Execution System) 프로그램",
+  "main": "index.js",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "install:all": "npm install && npm run install:frontend && npm run install:backend",
+    "install:frontend": "cd frontend && npm install",
+    "install:backend": "cd backend && npm install",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && npm run dev",
+    "build": "npm run build:frontend && npm run build:backend",
+    "build:frontend": "cd frontend && npm run build",
+    "build:backend": "cd backend && npm run build",
+    "start": "npm run start:backend",
+    "start:backend": "cd backend && npm start",
+    "electron": "cd frontend && npm run electron",
+    "electron:build": "cd frontend && npm run electron:build"
+  },
+  "keywords": [
+    "MES",
+    "Manufacturing",
+    "Electron",
+    "React",
+    "Node.js",
+    "PostgreSQL",
+    "Thailand"
+  ],
+  "author": "MES Thailand Team",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "dependencies": {
+    "xlsx": "^0.18.5"
+  }
+}

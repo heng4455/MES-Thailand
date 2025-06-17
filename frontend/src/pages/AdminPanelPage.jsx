@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { 
@@ -23,15 +23,27 @@ import {
   FiX,
   FiPackage,
   FiToggleLeft,
-  FiSave
+  FiSave,
+  FiClock,
+  FiCheckCircle
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { useUser } from '../contexts/UserContext';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 const AdminPanelPage = () => {
-  const { t } = useTranslation();
+  const { t, ready, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState('users');
   const { user, userProfile, loading } = useUser();
+
+  // i18n이 준비되지 않았거나 번역 파일이 로드되지 않았으면 로딩 표시
+  if (!ready || !i18n.hasResourceBundle(i18n.language, 'translation')) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 flex items-center justify-center">
+        <div className="text-white text-xl">Loading translations...</div>
+      </div>
+    );
+  }
 
   // 현재 로그인한 사용자 정보를 UserContext에서 가져오기
   const getCurrentUser = () => {
@@ -146,6 +158,85 @@ const AdminPanelPage = () => {
     reports: { status: 'active', users: 3, errors: 0 }
   });
 
+  // 사용자 관리 상태
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [userForm, setUserForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    role: 'operator',
+    department: '',
+    position: '',
+    status: 'active'
+  });
+
+  // 승인 대기 중인 사용자들
+  const [pendingUsers, setPendingUsers] = useState([
+    {
+      id: 'pending-1',
+      email: 'newuser1@example.com',
+      user_metadata: {
+        first_name: '김',
+        last_name: '철수',
+        department: 'production',
+        position: 'operator',
+        phone: '010-1234-5678',
+        approval_status: 'pending'
+      },
+      created_at: new Date(Date.now() - 86400000).toISOString(), // 1일 전
+      email_confirmed_at: new Date(Date.now() - 43200000).toISOString() // 12시간 전
+    },
+    {
+      id: 'pending-2',
+      email: 'newuser2@example.com',
+      user_metadata: {
+        first_name: '이',
+        last_name: '영희',
+        department: 'quality',
+        position: 'technician',
+        phone: '010-2345-6789',
+        approval_status: 'pending'
+      },
+      created_at: new Date(Date.now() - 172800000).toISOString(), // 2일 전
+      email_confirmed_at: null // 아직 이메일 인증 안됨
+    },
+    {
+      id: 'pending-3',
+      email: 'newuser3@example.com',
+      user_metadata: {
+        first_name: '박',
+        last_name: '민수',
+        department: 'maintenance',
+        position: 'supervisor',
+        phone: '010-3456-7890',
+        approval_status: 'pending'
+      },
+      created_at: new Date(Date.now() - 259200000).toISOString(), // 3일 전
+      email_confirmed_at: new Date(Date.now() - 86400000).toISOString() // 1일 전
+    }
+  ]);
+
+  // 삭제 확인 대화상자 상태
+  const [deleteConfirm, setDeleteConfirm] = useState({
+    isOpen: false,
+    type: '', // 'user', 'group', 'status'
+    item: null,
+    title: '',
+    message: ''
+  });
+
+  // PLC 편집 모달 상태
+  const [showPlcModal, setShowPlcModal] = useState(false);
+  const [editingPlc, setEditingPlc] = useState(null);
+  const [plcForm, setPlcForm] = useState({
+    name: '',
+    ipAddress: '',
+    port: 502,
+    protocol: 'Modbus TCP',
+    status: 'disconnected'
+  });
+
   // 제품 그룹 관리 상태
   const [productGroups, setProductGroups] = useState([
     {
@@ -243,11 +334,53 @@ const AdminPanelPage = () => {
     description: ''
   });
 
-  // PLC 연결 상태
-  const [plcConnections, setPlcConnections] = useState([]);
-  
+    // PLC 연결 상태
+  const [plcConnections, setPlcConnections] = useState([
+    {
+      id: 1,
+      name: 'Production Line 1',
+      ipAddress: '192.168.1.100',
+      port: 502,
+      protocol: 'Modbus TCP',
+      status: 'connected',
+      dataPoints: 25,
+      errorCount: 0,
+      lastUpdate: new Date().toISOString()
+    },
+    {
+      id: 2,
+      name: 'Production Line 2', 
+      ipAddress: '192.168.1.101',
+      port: 502,
+      protocol: 'Modbus TCP',
+      status: 'disconnected',
+      dataPoints: 0,
+      errorCount: 3,
+      lastUpdate: new Date(Date.now() - 300000).toISOString()
+    }
+  ]);
+
   // PLC 데이터 포인트
-  const [plcDataPoints, setPlcDataPoints] = useState([]);
+  const [plcDataPoints, setPlcDataPoints] = useState([
+    {
+      id: 1,
+      plcId: 1,
+      address: 'D100',
+      type: 'analog',
+      value: 125.4,
+      unit: 'V',
+      lastUpdate: new Date().toISOString()
+    },
+    {
+      id: 2,
+      plcId: 1,
+      address: 'M10',
+      type: 'digital',
+      value: true,
+      unit: '',
+      lastUpdate: new Date().toISOString()
+    }
+  ]);
   
   // PLC 데이터 로딩 중
   const [plcLoading, setPlcLoading] = useState(true);
@@ -445,17 +578,24 @@ const AdminPanelPage = () => {
     }
   };
 
-  const tabs = [
-    { id: 'users', label: t('admin.userManagement'), icon: FiUsers },
-    { id: 'system', label: t('admin.systemStatus'), icon: FiMonitor },
-    { id: 'pages', label: t('admin.pageStatus'), icon: FiActivity },
-    { id: 'product-groups', label: t('admin.productGroups'), icon: FiPackage },
-    { id: 'status-management', label: t('admin.statusManagement'), icon: FiToggleLeft },
-    { id: 'plc', label: t('admin.plcData'), icon: FiCpu },
-    { id: 'line', label: t('admin.lineNotifications'), icon: FiMessageSquare },
-    { id: 'apikeys', label: t('admin.apiKeys'), icon: FiKey },
-    { id: 'settings', label: t('admin.systemSettings'), icon: FiSettings }
-  ];
+  const tabs = useMemo(() => {
+    // i18n이 완전히 준비되었는지 확인
+    if (!ready || !i18n.hasResourceBundle(i18n.language, 'translation')) {
+      return [];
+    }
+    
+    return [
+      { id: 'users', label: t('admin.userManagement'), icon: FiUsers },
+      { id: 'system', label: t('admin.systemStatus'), icon: FiMonitor },
+      { id: 'pages', label: t('admin.pageStatus'), icon: FiActivity },
+      { id: 'product-groups', label: t('admin.productGroups'), icon: FiPackage },
+      { id: 'status-management', label: t('admin.statusManagement'), icon: FiToggleLeft },
+      { id: 'plc', label: t('admin.plcData'), icon: FiCpu },
+      { id: 'line', label: t('admin.lineNotifications'), icon: FiMessageSquare },
+      { id: 'apikeys', label: t('admin.apiKeys'), icon: FiKey },
+      { id: 'settings', label: t('admin.systemSettings'), icon: FiSettings }
+    ];
+  }, [t, ready, i18n]);
 
   const getRoleColor = (role) => {
     switch (role) {
@@ -582,6 +722,218 @@ const AdminPanelPage = () => {
     }
   };
 
+  // PLC 관리 함수들
+  const handleEditPlc = (plc) => {
+    setEditingPlc(plc);
+    setPlcForm({
+      name: plc.name,
+      ipAddress: plc.ipAddress,
+      port: plc.port,
+      protocol: plc.protocol,
+      status: plc.status
+    });
+    setShowPlcModal(true);
+  };
+
+  const handleSavePlc = () => {
+    if (!plcForm.name || !plcForm.ipAddress) {
+      toast.error(t('common.fillAllFields'));
+      return;
+    }
+
+    // PLC 연결 정보 업데이트
+    const updatedConnections = plcConnections.map(plc => 
+      plc.id === editingPlc.id 
+        ? {
+            ...plc,
+            name: plcForm.name,
+            ipAddress: plcForm.ipAddress,
+            port: plcForm.port,
+            protocol: plcForm.protocol,
+            status: plcForm.status
+          }
+        : plc
+    );
+    setPlcConnections(updatedConnections);
+    
+    setShowPlcModal(false);
+    setEditingPlc(null);
+    toast.success(t('admin.plcUpdated'));
+  };
+
+  const handleCancelPlcEdit = () => {
+    setShowPlcModal(false);
+    setEditingPlc(null);
+    setPlcForm({
+      name: '',
+      ipAddress: '',
+      port: 502,
+      protocol: 'Modbus TCP',
+      status: 'disconnected'
+    });
+  };
+
+  const handleViewPlcDetails = (plc) => {
+    // PLC 상세 정보를 보여주는 토스트 메시지
+    const details = `
+      PLC 이름: ${plc.name}
+      IP 주소: ${plc.ipAddress}:${plc.port}
+      프로토콜: ${plc.protocol}
+      상태: ${getPlcStatusText(plc.status)}
+      데이터포인트: ${plc.dataPoints}개
+      오류 수: ${plc.errorCount}
+      마지막 업데이트: ${new Date(plc.lastUpdate).toLocaleString('ko-KR')}
+    `;
+    
+    // 더 상세한 정보 표시
+    if (window.confirm(`${plc.name} PLC 상세 정보:\n${details}\n\n상세 로그를 콘솔에서 확인하시겠습니까?`)) {
+      console.log('PLC 상세 정보:', plc);
+      toast.success('PLC 상세 정보가 콘솔에 출력되었습니다.');
+    }
+  };
+
+  // 사용자 관리 함수들
+  const handleAddUser = () => {
+    setEditingUser(null);
+    setUserForm({
+      firstName: '',
+      lastName: '',
+      email: '',
+      role: 'operator',
+      department: '',
+      position: '',
+      status: 'active'
+    });
+    setShowUserModal(true);
+  };
+
+  const handleEditUser = (user) => {
+    setEditingUser(user);
+    setUserForm({
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      role: user.role,
+      department: user.department,
+      position: user.position,
+      status: user.status
+    });
+    setShowUserModal(true);
+  };
+
+  const handleViewUser = (user) => {
+    toast.success(`${user.firstName} ${user.lastName}의 상세 정보를 확인합니다.`);
+  };
+
+  const handleDeleteUser = (user) => {
+    setDeleteConfirm({
+      isOpen: true,
+      type: 'user',
+      item: user,
+      title: t('admin.confirmDeleteUserTitle'),
+      message: t('admin.confirmDeleteUser', { name: `${user.firstName} ${user.lastName}` })
+    });
+  };
+
+  const handleSaveUser = () => {
+    if (!userForm.firstName || !userForm.lastName || !userForm.email) {
+      toast.error(t('admin.userRequired'));
+      return;
+    }
+
+    if (editingUser) {
+      // 수정
+      setUsers(prev => prev.map(user => 
+        user.id === editingUser.id 
+          ? { ...user, ...userForm }
+          : user
+      ));
+      toast.success(t('admin.userUpdated'));
+    } else {
+      // 추가
+      const newUser = {
+        id: Math.max(...users.map(u => u.id)) + 1,
+        ...userForm,
+        lastLogin: new Date().toISOString()
+      };
+      setUsers(prev => [...prev, newUser]);
+      toast.success(t('admin.userAdded'));
+    }
+
+    setShowUserModal(false);
+    setEditingUser(null);
+  };
+
+  // 사용자 승인/거부 함수들
+  const handleApproveUser = async (pendingUser) => {
+    try {
+      // 승인된 사용자를 기존 사용자 목록에 추가
+      const newUser = {
+        id: Math.max(...users.map(u => u.id), 0) + 1,
+        firstName: pendingUser.user_metadata.first_name,
+        lastName: pendingUser.user_metadata.last_name,
+        email: pendingUser.email,
+        role: 'operator', // 기본 역할
+        department: pendingUser.user_metadata.department,
+        position: pendingUser.user_metadata.position,
+        status: 'active',
+        lastLogin: null,
+        approvedAt: new Date().toISOString(),
+        approvedBy: getCurrentUser().name
+      };
+
+      setUsers(prev => [...prev, newUser]);
+      setPendingUsers(prev => prev.filter(user => user.id !== pendingUser.id));
+      
+      toast.success(`${pendingUser.user_metadata.first_name} ${pendingUser.user_metadata.last_name}님의 계정이 승인되었습니다.`);
+      
+      // 실제 환경에서는 authHelpers.updateUserApprovalStatus 호출
+      console.log('사용자 승인:', pendingUser.id);
+      
+    } catch (error) {
+      console.error('사용자 승인 오류:', error);
+      toast.error('사용자 승인 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleRejectUser = async (pendingUser) => {
+    try {
+      setPendingUsers(prev => prev.filter(user => user.id !== pendingUser.id));
+      
+      toast.success(`${pendingUser.user_metadata.first_name} ${pendingUser.user_metadata.last_name}님의 계정이 거부되었습니다.`);
+      
+      // 실제 환경에서는 authHelpers.updateUserApprovalStatus 호출
+      console.log('사용자 거부:', pendingUser.id);
+      
+    } catch (error) {
+      console.error('사용자 거부 오류:', error);
+      toast.error('사용자 거부 중 오류가 발생했습니다.');
+    }
+  };
+
+  const getDepartmentText = (department) => {
+    const departments = {
+      'production': '생산부',
+      'quality': '품질관리부',
+      'maintenance': '설비보전부',
+      'planning': '생산계획부',
+      'engineering': '기술부',
+      'management': '경영진'
+    };
+    return departments[department] || department;
+  };
+
+  const getPositionText = (position) => {
+    const positions = {
+      'operator': '작업자',
+      'technician': '기술자',
+      'supervisor': '팀장',
+      'manager': '부장',
+      'director': '이사'
+    };
+    return positions[position] || position;
+  };
+
   // 제품 그룹 관리 함수들
   const handleAddProductGroup = () => {
     setEditingProductGroup(null);
@@ -641,10 +993,13 @@ const AdminPanelPage = () => {
   };
 
   const handleDeleteProductGroup = (group) => {
-    if (window.confirm(t('admin.confirmDeleteGroup', { name: group.name, code: group.code }))) {
-      setProductGroups(prev => prev.filter(g => g.id !== group.id));
-      toast.success(t('admin.productGroupDeleted'));
-    }
+    setDeleteConfirm({
+      isOpen: true,
+      type: 'group',
+      item: group,
+      title: t('admin.confirmDeleteGroupTitle'),
+      message: t('admin.confirmDeleteGroup', { name: group.name, code: group.code })
+    });
   };
 
   const handleToggleProductGroupStatus = (group) => {
@@ -709,13 +1064,45 @@ const AdminPanelPage = () => {
   };
 
   const handleDeleteStatus = (status) => {
-    if (window.confirm(t('admin.confirmDeleteStatus', { label: status.label }))) {
-      setPageStatuses(prev => ({
-        ...prev,
-        [selectedStatusPage]: prev[selectedStatusPage].filter(s => s.id !== status.id)
-      }));
-      toast.success(t('admin.statusDeleted'));
+    setDeleteConfirm({
+      isOpen: true,
+      type: 'status',
+      item: status,
+      title: t('admin.confirmDeleteStatusTitle'),
+      message: t('admin.confirmDeleteStatus', { label: status.label })
+    });
+  };
+
+  // 삭제 확인 처리
+  const handleConfirmDelete = () => {
+    const { type, item } = deleteConfirm;
+    
+    switch (type) {
+      case 'user':
+        setUsers(prev => prev.filter(u => u.id !== item.id));
+        toast.success(t('admin.userDeleted'));
+        break;
+      case 'group':
+        setProductGroups(prev => prev.filter(g => g.id !== item.id));
+        toast.success(t('admin.productGroupDeleted'));
+        break;
+      case 'status':
+        setPageStatuses(prev => ({
+          ...prev,
+          [selectedStatusPage]: prev[selectedStatusPage].filter(s => s.id !== item.id)
+        }));
+        toast.success(t('admin.statusDeleted'));
+        break;
+      default:
+        break;
     }
+    
+    setDeleteConfirm({ isOpen: false, type: '', item: null, title: '', message: '' });
+  };
+
+  // 삭제 취소 처리
+  const handleCancelDelete = () => {
+    setDeleteConfirm({ isOpen: false, type: '', item: null, title: '', message: '' });
   };
 
   // 알림 타입별 한글 변환
@@ -741,9 +1128,113 @@ const AdminPanelPage = () => {
 
   const renderUsersTab = () => (
     <div className="space-y-6">
+      {/* 승인 대기 중인 사용자들 */}
+      {pendingUsers.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-white">승인 대기 중인 사용자 ({pendingUsers.length})</h2>
+            <div className="flex items-center gap-2 text-yellow-400">
+              <FiClock size={16} />
+              <span className="text-sm">관리자 승인 필요</span>
+            </div>
+          </div>
+          
+          <div className="bg-yellow-500/10 backdrop-blur-lg rounded-xl border border-yellow-500/20 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-yellow-500/10">
+                  <tr>
+                    <th className="text-left p-4 text-white font-medium">사용자</th>
+                    <th className="text-left p-4 text-white font-medium">이메일</th>
+                    <th className="text-left p-4 text-white font-medium">부서/직책</th>
+                    <th className="text-left p-4 text-white font-medium">가입일</th>
+                    <th className="text-left p-4 text-white font-medium">이메일 인증</th>
+                    <th className="text-left p-4 text-white font-medium">작업</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pendingUsers.map(user => (
+                    <tr key={user.id} className="border-t border-yellow-500/20 hover:bg-yellow-500/5 transition-colors">
+                      <td className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center text-white font-medium">
+                            {user.user_metadata.first_name?.[0] || '?'}
+                          </div>
+                          <div>
+                            <div className="text-white font-medium">
+                              {user.user_metadata.first_name} {user.user_metadata.last_name}
+                            </div>
+                            <div className="text-white/60 text-sm">
+                              {getPositionText(user.user_metadata.position)}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4 text-white/80">{user.email}</td>
+                      <td className="p-4 text-white/80">
+                        <div>{getDepartmentText(user.user_metadata.department)}</div>
+                        <div className="text-sm text-white/60">
+                          {getPositionText(user.user_metadata.position)}
+                        </div>
+                      </td>
+                      <td className="p-4 text-white/80">
+                        {new Date(user.created_at).toLocaleDateString('ko-KR')}
+                        <div className="text-sm text-white/60">
+                          {Math.floor((Date.now() - new Date(user.created_at)) / (1000 * 60 * 60 * 24))}일 전
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        {user.email_confirmed_at ? (
+                          <span className="flex items-center gap-1 text-green-400 text-sm">
+                            <FiCheckCircle size={14} />
+                            인증 완료
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1 text-yellow-400 text-sm">
+                            <FiClock size={14} />
+                            인증 대기
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => handleApproveUser(user)}
+                            disabled={!user.email_confirmed_at}
+                            className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                              user.email_confirmed_at 
+                                ? 'bg-green-600 hover:bg-green-700 text-white'
+                                : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                            }`}
+                            title={user.email_confirmed_at ? '사용자 승인' : '이메일 인증 후 승인 가능'}
+                          >
+                            ✓ 승인
+                          </button>
+                          <button 
+                            onClick={() => handleRejectUser(user)}
+                            className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-sm font-medium transition-colors"
+                            title="사용자 거부"
+                          >
+                            ✗ 거부
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 기존 사용자 관리 */}
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-white">{t('admin.userManagement')}</h2>
-        <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+        <button 
+          onClick={handleAddUser}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+        >
           <FiPlus size={16} />
           {t('admin.addUser')}
         </button>
@@ -794,13 +1285,25 @@ const AdminPanelPage = () => {
                   </td>
                   <td className="p-4">
                     <div className="flex items-center gap-2">
-                      <button className="p-1 text-blue-400 hover:text-blue-300 transition-colors">
+                      <button 
+                        onClick={() => handleEditUser(user)}
+                        className="p-1 text-blue-400 hover:text-blue-300 transition-colors"
+                        title={t('admin.editUser')}
+                      >
                         <FiEdit3 size={16} />
                       </button>
-                      <button className="p-1 text-yellow-400 hover:text-yellow-300 transition-colors">
+                      <button 
+                        onClick={() => handleViewUser(user)}
+                        className="p-1 text-yellow-400 hover:text-yellow-300 transition-colors"
+                        title={t('admin.viewUser')}
+                      >
                         <FiEye size={16} />
                       </button>
-                      <button className="p-1 text-red-400 hover:text-red-300 transition-colors">
+                      <button 
+                        onClick={() => handleDeleteUser(user)}
+                        className="p-1 text-red-400 hover:text-red-300 transition-colors"
+                        title={t('admin.deleteUser')}
+                      >
                         <FiTrash2 size={16} />
                       </button>
                     </div>
@@ -1033,14 +1536,16 @@ const AdminPanelPage = () => {
                   <td className="p-4">
                     <div className="flex items-center gap-2">
                       <button 
-                        onClick={() => toast.success(`${plc.name} 설정을 편집합니다.`)}
+                        onClick={() => handleEditPlc(plc)}
                         className="p-1 text-blue-400 hover:text-blue-300 transition-colors"
+                        title="PLC 설정 편집"
                       >
                         <FiEdit3 size={16} />
                       </button>
                       <button 
-                        onClick={() => toast.success(`${plc.name} 상세 정보를 확인합니다.`)}
+                        onClick={() => handleViewPlcDetails(plc)}
                         className="p-1 text-yellow-400 hover:text-yellow-300 transition-colors"
+                        title="PLC 상세 정보 보기"
                       >
                         <FiEye size={16} />
                       </button>
@@ -1101,7 +1606,7 @@ const AdminPanelPage = () => {
             return (
               <div key={dataPoint.id} className="bg-white/5 rounded-lg p-4 border border-white/10">
                 <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-white font-medium text-sm">{dataPoint.name}</h4>
+                  <h4 className="text-white font-medium text-sm">{dataPoint.address}</h4>
                   <span className={`text-xs px-2 py-1 rounded ${
                     dataPoint.type === 'analog' ? 'bg-blue-500/20 text-blue-300' : 'bg-green-500/20 text-green-300'
                   }`}>
@@ -1804,6 +2309,216 @@ const AdminPanelPage = () => {
           {activeTab === 'settings' && renderSettingsTab()}
         </motion.div>
       </div>
+
+      {/* 사용자 관리 모달 */}
+      {showUserModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold text-white mb-4">
+              {editingUser ? t('admin.editUser') : t('admin.addUser')}
+            </h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-white/80 mb-2">{t('admin.firstName')}</label>
+                <input
+                  type="text"
+                  value={userForm.firstName}
+                  onChange={(e) => setUserForm(prev => ({ ...prev, firstName: e.target.value }))}
+                  className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400"
+                  placeholder={t('admin.firstNamePlaceholder')}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-white/80 mb-2">{t('admin.lastName')}</label>
+                <input
+                  type="text"
+                  value={userForm.lastName}
+                  onChange={(e) => setUserForm(prev => ({ ...prev, lastName: e.target.value }))}
+                  className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400"
+                  placeholder={t('admin.lastNamePlaceholder')}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-white/80 mb-2">{t('admin.email')}</label>
+                <input
+                  type="email"
+                  value={userForm.email}
+                  onChange={(e) => setUserForm(prev => ({ ...prev, email: e.target.value }))}
+                  className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400"
+                  placeholder={t('admin.emailPlaceholder')}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-white/80 mb-2">{t('admin.role')}</label>
+                <select
+                  value={userForm.role}
+                  onChange={(e) => setUserForm(prev => ({ ...prev, role: e.target.value }))}
+                  className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-blue-400"
+                >
+                  <option value="admin" className="bg-gray-800">{t('admin.admin')}</option>
+                  <option value="manager" className="bg-gray-800">{t('admin.manager')}</option>
+                  <option value="operator" className="bg-gray-800">{t('admin.operator')}</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-white/80 mb-2">{t('admin.department')}</label>
+                <input
+                  type="text"
+                  value={userForm.department}
+                  onChange={(e) => setUserForm(prev => ({ ...prev, department: e.target.value }))}
+                  className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400"
+                  placeholder={t('admin.departmentPlaceholder')}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-white/80 mb-2">{t('admin.position')}</label>
+                <input
+                  type="text"
+                  value={userForm.position}
+                  onChange={(e) => setUserForm(prev => ({ ...prev, position: e.target.value }))}
+                  className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400"
+                  placeholder={t('admin.positionPlaceholder')}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-white/80 mb-2">{t('admin.status')}</label>
+                <select
+                  value={userForm.status}
+                  onChange={(e) => setUserForm(prev => ({ ...prev, status: e.target.value }))}
+                  className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-blue-400"
+                >
+                  <option value="active" className="bg-gray-800">{t('admin.active')}</option>
+                  <option value="inactive" className="bg-gray-800">{t('admin.inactive')}</option>
+                </select>
+              </div>
+            </div>
+            
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowUserModal(false)}
+                className="flex-1 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={handleSaveUser}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              >
+                <FiSave size={16} />
+                {t('common.save')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PLC 편집 모달 */}
+      {showPlcModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold text-white mb-4">
+              {t('admin.editPlc')} - {editingPlc?.name}
+            </h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-white/80 mb-2">{t('admin.plcName')}</label>
+                <input
+                  type="text"
+                  value={plcForm.name}
+                  onChange={(e) => setPlcForm(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400"
+                  placeholder={t('admin.plcNamePlaceholder')}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-white/80 mb-2">{t('admin.ipAddress')}</label>
+                <input
+                  type="text"
+                  value={plcForm.ipAddress}
+                  onChange={(e) => setPlcForm(prev => ({ ...prev, ipAddress: e.target.value }))}
+                  className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400"
+                  placeholder="192.168.1.100"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-white/80 mb-2">{t('admin.port')}</label>
+                <input
+                  type="number"
+                  value={plcForm.port}
+                  onChange={(e) => setPlcForm(prev => ({ ...prev, port: parseInt(e.target.value) || 502 }))}
+                  className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400"
+                  placeholder="502"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-white/80 mb-2">{t('admin.protocol')}</label>
+                <select
+                  value={plcForm.protocol}
+                  onChange={(e) => setPlcForm(prev => ({ ...prev, protocol: e.target.value }))}
+                  className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-blue-400"
+                >
+                  <option value="Modbus TCP" className="bg-gray-800">Modbus TCP</option>
+                  <option value="Ethernet/IP" className="bg-gray-800">Ethernet/IP</option>
+                  <option value="OPC UA" className="bg-gray-800">OPC UA</option>
+                  <option value="Profinet" className="bg-gray-800">Profinet</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-white/80 mb-2">{t('admin.connectionStatus')}</label>
+                <select
+                  value={plcForm.status}
+                  onChange={(e) => setPlcForm(prev => ({ ...prev, status: e.target.value }))}
+                  className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-blue-400"
+                >
+                  <option value="connected" className="bg-gray-800">{t('admin.connected')}</option>
+                  <option value="disconnected" className="bg-gray-800">{t('admin.disconnected')}</option>
+                  <option value="warning" className="bg-gray-800">{t('admin.warning')}</option>
+                </select>
+              </div>
+            </div>
+            
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={handleCancelPlcEdit}
+                className="flex-1 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={handleSavePlc}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              >
+                <FiSave size={16} />
+                {t('common.save')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 삭제 확인 대화상자 */}
+      <ConfirmDialog
+        isOpen={deleteConfirm.isOpen}
+        onClose={handleCancelDelete}
+        onConfirm={handleConfirmDelete}
+        title={deleteConfirm.title}
+        message={deleteConfirm.message}
+        confirmText={t('admin.deleteButton')}
+        cancelText={t('admin.cancelButton')}
+        type="danger"
+      />
     </div>
   );
 };

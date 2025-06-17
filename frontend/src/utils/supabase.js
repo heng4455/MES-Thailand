@@ -32,7 +32,9 @@ export const authHelpers = {
             last_name: userData.lastName,
             phone: userData.phone,
             department: userData.department,
-            position: userData.position
+            position: userData.position,
+            approval_status: 'pending', // 관리자 승인 대기 상태
+            role: 'operator' // 기본 역할
           },
           emailRedirectTo: `${window.location.origin}/verify-email`
         }
@@ -73,10 +75,42 @@ export const authHelpers = {
         throw error;
       }
 
+      // 이메일 인증 확인
+      if (!data.user?.email_confirmed_at) {
+        return { 
+          success: false, 
+          error: 'EMAIL_NOT_CONFIRMED',
+          message: '이메일 인증이 필요합니다. 이메일을 확인해주세요.' 
+        };
+      }
+
+      // 관리자 승인 상태 확인
+      const approvalStatus = data.user?.user_metadata?.approval_status;
+      if (approvalStatus === 'pending') {
+        return { 
+          success: false, 
+          error: 'APPROVAL_PENDING',
+          message: '관리자 승인 대기 중입니다. 승인이 완료될 때까지 기다려주세요.' 
+        };
+      } else if (approvalStatus === 'rejected') {
+        return { 
+          success: false, 
+          error: 'APPROVAL_REJECTED',
+          message: '계정 승인이 거부되었습니다. 관리자에게 문의하세요.' 
+        };
+      } else if (approvalStatus !== 'approved') {
+        return { 
+          success: false, 
+          error: 'APPROVAL_REQUIRED',
+          message: '계정 승인이 필요합니다. 관리자에게 문의하세요.' 
+        };
+      }
+
       console.log('✅ 로그인 성공:', {
         userId: data.user?.id,
         email: data.user?.email,
         emailConfirmed: data.user?.email_confirmed_at,
+        approvalStatus: approvalStatus,
         sessionExists: !!data.session
       });
 
@@ -183,6 +217,61 @@ export const authHelpers = {
       return { success: true, data };
     } catch (error) {
       console.error('Update password error:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // 관리자 기능: 사용자 승인 상태 업데이트
+  updateUserApprovalStatus: async (userId, status, adminUser) => {
+    try {
+      // 관리자 권한 확인
+      if (!adminUser || !['admin', 'super_admin'].includes(adminUser.user_metadata?.role)) {
+        throw new Error('관리자 권한이 필요합니다.');
+      }
+
+      // 사용자 메타데이터 업데이트
+      const { data, error } = await supabase.auth.admin.updateUserById(userId, {
+        user_metadata: {
+          approval_status: status, // 'pending', 'approved', 'rejected'
+          approved_by: adminUser.id,
+          approved_at: new Date().toISOString()
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      return { success: true, data };
+    } catch (error) {
+      console.error('Update user approval status error:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // 승인 대기 중인 사용자 목록 조회
+  getPendingUsers: async () => {
+    try {
+      // 이 기능은 실제로는 데이터베이스에서 조회해야 합니다
+      // 여기서는 시뮬레이션된 데이터를 반환합니다
+      const pendingUsers = [
+        {
+          id: 'pending-user-1',
+          email: 'newuser@example.com',
+          user_metadata: {
+            first_name: '홍',
+            last_name: '길동',
+            department: 'production',
+            position: 'operator',
+            approval_status: 'pending'
+          },
+          created_at: new Date().toISOString()
+        }
+      ];
+
+      return { success: true, data: pendingUsers };
+    } catch (error) {
+      console.error('Get pending users error:', error);
       return { success: false, error: error.message };
     }
   }

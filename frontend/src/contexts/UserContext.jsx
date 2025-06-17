@@ -14,7 +14,6 @@ export const useUser = () => {
 export const UserProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
 
   // 역할 정의
   const ROLES = {
@@ -103,29 +102,20 @@ export const UserProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    console.log('UserContext: Initializing...');
-    
     // 초기 세션 확인
     getSession();
 
     // Auth 상태 변경 리스너
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event, session?.user ? 'User logged in' : 'No user');
-      
-      if (event === 'INITIAL_SESSION') {
-        console.log('Initial session check:', session ? 'Session found' : 'No session');
-      }
+      console.log('Auth state changed:', event, session);
       
       if (session?.user) {
-        console.log('Setting user:', session.user.email);
         setUser(session.user);
         await loadUserProfile(session.user.id);
       } else {
-        console.log('Clearing user session');
         setUser(null);
         setUserProfile(null);
       }
-      setLoading(false);
     });
 
     return () => {
@@ -134,34 +124,16 @@ export const UserProvider = ({ children }) => {
   }, []);
 
   const getSession = async () => {
-    console.log('UserContext: Getting initial session...');
-    setLoading(true);
-    
     try {
       const { data: { session }, error } = await supabase.auth.getSession();
-      
-      if (error) {
-        console.error('Session error:', error);
-        throw error;
-      }
-      
-      console.log('Session retrieved:', session ? 'Valid session found' : 'No session');
+      if (error) throw error;
       
       if (session?.user) {
-        console.log('Session user:', session.user.email);
         setUser(session.user);
         await loadUserProfile(session.user.id);
-      } else {
-        console.log('No valid session found');
-        setUser(null);
-        setUserProfile(null);
       }
     } catch (error) {
       console.error('Error getting session:', error);
-      setUser(null);
-      setUserProfile(null);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -252,38 +224,13 @@ export const UserProvider = ({ children }) => {
 
   const signOut = async () => {
     try {
-      console.log('🚪 로그아웃 시도...');
-      
-      // Supabase 로그아웃
       const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error('Supabase 로그아웃 오류:', error);
-        throw error;
-      }
+      if (error) throw error;
       
-      // 로컬 스토리지 정리
-      localStorage.removeItem('supabase_session');
-      localStorage.removeItem('supabase.auth.token');
-      localStorage.clear(); // 모든 로컬 스토리지 정리
-      
-      // 상태 초기화
       setUser(null);
       setUserProfile(null);
-      setLoading(false);
-      
-      console.log('✅ 로그아웃 완료');
-      
-      return { success: true };
     } catch (error) {
       console.error('Error signing out:', error);
-      
-      // 오류가 발생해도 강제로 로컬 상태 정리
-      localStorage.clear();
-      setUser(null);
-      setUserProfile(null);
-      setLoading(false);
-      
-      return { success: false, error: error.message };
     }
   };
 
@@ -301,7 +248,7 @@ export const UserProvider = ({ children }) => {
   const value = {
     user,
     userProfile,
-    loading,
+    loading: false, // 항상 false로 설정하여 로딩 화면 표시 안 함
     
     // 역할 및 권한
     ROLES,

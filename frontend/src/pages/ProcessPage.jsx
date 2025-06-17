@@ -181,28 +181,28 @@ const ProcessPage = () => {
   // 통계 데이터
   const stats = [
     { 
-      title: '총 공정 수', 
+      title: t('process.totalProcesses'), 
       value: '96', 
       color: 'text-blue-600',
       bgColor: 'bg-blue-50',
       borderColor: 'border-blue-200'
     },
     { 
-      title: '관련 제품', 
+      title: t('process.relatedProducts'), 
       value: '16', 
       color: 'text-green-600',
       bgColor: 'bg-green-50',
       borderColor: 'border-green-200'
     },
     { 
-      title: '생산 요구사항', 
+      title: t('process.productionRequests'), 
       value: '0', 
       color: 'text-purple-600',
       bgColor: 'bg-purple-50',
       borderColor: 'border-purple-200'
     },
     { 
-      title: '검정 결과', 
+      title: t('process.testResults'), 
       value: '96', 
       color: 'text-orange-600',
       bgColor: 'bg-orange-50',
@@ -242,15 +242,15 @@ const ProcessPage = () => {
   const getStatusText = (status) => {
     switch (status) {
       case 'processing':
-        return '0개 생비';
+        return t('process.statusText.processing');
       case 'completed':
-        return '완료';
+        return t('process.statusText.completed');
       case 'paused':
-        return '일시정지';
+        return t('process.statusText.paused');
       case 'waiting':
-        return '대기';
+        return t('process.statusText.waiting');
       default:
-        return '알 수 없음';
+        return t('process.statusText.unknown');
     }
   };
 
@@ -283,7 +283,7 @@ const ProcessPage = () => {
 
   const confirmDelete = () => {
     // 실제 구현에서는 API 호출
-    alert(`"${selectedProcess.processName}" 공정이 삭제되었습니다.`);
+    alert(t('process.messages.processDeleted', { name: selectedProcess.processName }));
     setShowDeleteDialog(false);
     setSelectedProcess(null);
   };
@@ -291,10 +291,10 @@ const ProcessPage = () => {
   const handleSave = () => {
     // 실제 구현에서는 API 호출
     if (selectedProcess) {
-      alert(`"${formData.processName}" 공정이 수정되었습니다.`);
+      alert(t('process.messages.processUpdated', { name: formData.processName }));
       setShowEditModal(false);
     } else {
-      alert(`"${formData.processName}" 공정이 추가되었습니다.`);
+      alert(t('process.messages.processAdded', { name: formData.processName }));
       setShowAddModal(false);
     }
     resetForm();
@@ -378,10 +378,10 @@ const ProcessPage = () => {
       const fileName = `공정목록_${new Date().toISOString().split('T')[0]}.xlsx`;
       XLSX.writeFile(wb, fileName);
       
-      showToastMessage('공정 데이터가 성공적으로 내보내졌습니다.', 'success');
+      showToastMessage(t('process.messages.exportSuccess'), 'success');
     } catch (error) {
       console.error('Export error:', error);
-      showToastMessage('내보내기 중 오류가 발생했습니다.', 'error');
+      showToastMessage(t('process.messages.exportError'), 'error');
     }
   };
 
@@ -419,7 +419,7 @@ const ProcessPage = () => {
 
           // 필수 필드 검증
           if (!processName || !processId || !client) {
-            console.warn(`행 ${index + 2}: 필수 필드가 누락되었습니다.`);
+            console.warn(t('process.messages.requiredFieldsMissing', { row: index + 2 }));
             hasErrors = true;
             return;
           }
@@ -450,16 +450,19 @@ const ProcessPage = () => {
         if (importedProcesses.length > 0) {
           setProcesses(prev => [...prev, ...importedProcesses]);
           showToastMessage(
-            `${importedProcesses.length}개의 공정이 성공적으로 가져와졌습니다.${hasErrors ? ' (일부 오류 있음)' : ''}`,
+            t('process.messages.importSuccess', { 
+              count: importedProcesses.length, 
+              errors: hasErrors ? t('process.messages.importWarning') : '' 
+            }),
             hasErrors ? 'warning' : 'success'
           );
         } else {
-          showToastMessage('가져올 수 있는 유효한 데이터가 없습니다.', 'error');
+          showToastMessage(t('process.messages.importNoData'), 'error');
         }
 
       } catch (error) {
         console.error('Import error:', error);
-        showToastMessage('파일을 읽는 중 오류가 발생했습니다.', 'error');
+        showToastMessage(t('process.messages.importError'), 'error');
       }
     };
 
@@ -663,10 +666,10 @@ const ProcessPage = () => {
                       process.statusType === 'paused' ? 'bg-yellow-100 text-yellow-800' :
                       'bg-gray-100 text-gray-800'
                     }`}>
-                      {process.statusType === 'processing' ? '진행중' :
-                       process.statusType === 'completed' ? '완료' :
-                       process.statusType === 'paused' ? '일시정지' :
-                       '대기중'}
+                      {process.statusType === 'processing' ? t('process.statusLabel.processing') :
+                       process.statusType === 'completed' ? t('process.statusLabel.completed') :
+                       process.statusType === 'paused' ? t('process.statusLabel.paused') :
+                       t('process.statusLabel.waiting')}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -777,7 +780,7 @@ const ProcessPage = () => {
                 name="client"
                 value={formData.client}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
-                placeholder="제품을 선택하면 자동으로 설정됩니다"
+                placeholder={t('process.messages.autoClientPlaceholder')}
                 readOnly
               />
             </div>

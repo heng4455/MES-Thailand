@@ -34,21 +34,7 @@ const LoginPage = () => {
       if (result.success) {
         const { user, session } = result.data;
         
-        // 이메일 인증 확인 (개발 환경에서는 우회)
-        if (!user.email_confirmed_at && process.env.NODE_ENV === 'production') {
-          toast.error('이메일 인증이 필요합니다. 이메일을 확인해주세요.');
-          setIsLoading(false);
-          return;
-        }
-        
-        // 이메일 미인증이어도 로그인 허용 (개발용)
-        if (!user.email_confirmed_at) {
-          console.log('⚠️ 이메일 미인증 상태이지만 개발 환경에서 로그인을 허용합니다.');
-          toast.success('로그인 성공! (이메일 미인증)');
-        } else {
-          toast.success('로그인 성공!');
-        }
-        
+        toast.success('로그인 성공!');
         localStorage.setItem('supabase_session', JSON.stringify(session));
         
         // 짧은 지연 후 리다이렉트 (사용자 경험 개선)
@@ -66,12 +52,34 @@ const LoginPage = () => {
         }, 500);
         
       } else {
-        if (result.error.includes('Invalid login credentials')) {
-          toast.error('이메일 또는 비밀번호가 올바르지 않습니다');
-        } else if (result.error.includes('Email not confirmed')) {
-          toast.error('이메일 인증이 필요합니다. 이메일을 확인해주세요.');
-        } else {
-          toast.error(result.error || '로그인 중 오류가 발생했습니다');
+        // 특정 오류 타입에 따른 메시지 처리
+        switch (result.error) {
+          case 'EMAIL_NOT_CONFIRMED':
+            toast.error('이메일 인증이 필요합니다. 이메일을 확인해주세요.');
+            break;
+          case 'APPROVAL_PENDING':
+            toast.error('관리자 승인 대기 중입니다. 승인이 완료될 때까지 기다려주세요.', {
+              duration: 6000
+            });
+            break;
+          case 'APPROVAL_REJECTED':
+            toast.error('계정 승인이 거부되었습니다. 관리자에게 문의하세요.', {
+              duration: 6000
+            });
+            break;
+          case 'APPROVAL_REQUIRED':
+            toast.error('계정 승인이 필요합니다. 관리자에게 문의하세요.', {
+              duration: 6000
+            });
+            break;
+          default:
+            if (result.error.includes('Invalid login credentials')) {
+              toast.error('이메일 또는 비밀번호가 올바르지 않습니다');
+            } else if (result.message) {
+              toast.error(result.message);
+            } else {
+              toast.error(result.error || '로그인 중 오류가 발생했습니다');
+            }
         }
         setIsLoading(false);
       }
@@ -119,23 +127,13 @@ const LoginPage = () => {
 
   // 로그아웃 핸들러
   const handleLogout = async () => {
-    console.log('🚪 LoginPage 로그아웃 시도... (간단한 방식)');
-    
     try {
-      // Supabase 로그아웃 시도 (비동기로 백그라운드에서)
-      signOut().catch(err => console.log('Supabase 로그아웃 오류:', err));
+      await signOut();
+      toast.success('로그아웃되었습니다');
     } catch (error) {
-      console.log('로그아웃 오류 무시:', error);
+      console.error('Logout error:', error);
+      toast.error('로그아웃 중 오류가 발생했습니다');
     }
-    
-    // 즉시 로컬 정리 및 새로고침
-    localStorage.clear();
-    toast.success('로그아웃되었습니다');
-    console.log('✅ 로컬 스토리지 정리 완료, 페이지 새로고침');
-    
-    setTimeout(() => {
-      window.location.reload();
-    }, 500);
   };
 
   return (
@@ -226,7 +224,26 @@ const LoginPage = () => {
             </p>
           </div>
 
-
+          {/* 테스트 계정 빠른 로그인 */}
+          <div className="mb-6 p-3 bg-green-50 border border-green-200 rounded-lg">
+            <p className="text-sm text-green-700 text-center mb-2">
+              <strong>테스트 계정으로 빠른 로그인:</strong>
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                // 테스트 계정 정보로 폼 자동 채우기
+                document.querySelector('input[name="email"]').value = 'test@example.com';
+                document.querySelector('input[name="password"]').value = 'test123456';
+                
+                // 자동 로그인 시도
+                handleLogin({ email: 'test@example.com', password: 'test123456' });
+              }}
+              className="w-full px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+            >
+              테스트 계정으로 로그인 (test@example.com)
+            </button>
+          </div>
 
           {/* 로그인 폼 */}
           <form onSubmit={handleSubmit(handleLogin)} className="space-y-6">

@@ -50,7 +50,8 @@
     "offline": "Offline",
     "connected": "Connected",
     "disconnected": "Disconnected",
-    "lastUpdate": "Last Update"
+    "lastUpdate": "Last Update",
+    "fillAllFields": "Please fill in all fields"
   },
   "app": {
     "title": "MES Thailand",
@@ -92,7 +93,15 @@
     "loginSuccess": "Login successful",
     "loginFailed": "Login failed",
     "registerSuccess": "Registration successful",
-    "emailSent": "Verification email has been sent"
+    "emailSent": "Verification email has been sent",
+    "loginButton": "Login",
+    "registerButton": "Register",
+    "backToLogin": "Back to Login",
+    "emailPlaceholder": "Enter your email",
+    "passwordPlaceholder": "Enter your password",
+    "firstNamePlaceholder": "Enter your first name",
+    "lastNamePlaceholder": "Enter your last name",
+    "confirmPasswordPlaceholder": "Re-enter your password"
   },
   "dashboard": {
     "title": "Real-time Dashboard",
@@ -110,7 +119,6 @@
     "qualityInspection": "Quality Inspection",
     "equipmentCheck": "Equipment Check",
     "inventoryCheck": "Inventory Check",
-    "userManagement": "User Management",
     "percentComplete": "Complete",
     "vsYesterday": "vs Yesterday",
     "realTimeConnection": "Real-time Connection",
@@ -118,7 +126,13 @@
     "maintenance": "Maintenance",
     "stopped": "Stopped",
     "temperature": "Temperature",
-    "power": "Power"
+    "power": "Power",
+    "metrics": {
+      "production": "Production",
+      "efficiency": "Efficiency",
+      "quality": "Quality",
+      "downtime": "Downtime"
+    }
   },
   "production": {
     "title": "Production Management",
@@ -153,7 +167,8 @@
     "running": "Running",
     "maintenance": "Maintenance",
     "stopped": "Stopped",
-    "issues": "Issues"
+    "issues": "Issues",
+    "line": "Line"
   },
   "hierarchical": {
     "title": "Hierarchical Structure View",
@@ -173,7 +188,7 @@
     "totalProducts": "Total Products"
   },
   "admin": {
-    "titles": "Admin Panel",
+    "title": "Admin Panel",
     "subtitle": "System Management and Monitoring",
     "currentUser": "Current User",
     "userManagement": "User Management",
@@ -236,6 +251,7 @@
     "plcManagement": "PLC Data Management",
     "refreshData": "Refresh Data",
     "loading": "Loading...",
+    "administrator": "Administrator",
     "totalConnections": "Total Connections",
     "onlineConnections": "Online Connections",
     "errorConnections": "Error Connections",
@@ -268,7 +284,7 @@
     "testNotificationFailed": "Failed to send test notification",
     "recentNotifications": "Recent Notification History",
     "notificationType": "Type",
-    "title": "Title",
+    "title": "Admin Panel",
     "message": "Message",
     "sendTime": "Send Time",
     "recipient": "Recipient",
@@ -362,7 +378,32 @@
     "openRegistrationPage": "Open Registration Page",
     "consoleUserList": "Output User List to Console",
     "checkDeveloperTools": "Check in Developer Tools",
-    "totalUsers": "Total {{count}} users are registered"
+    "totalUsers": "Total {{count}} users are registered",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "confirmDeleteUser": "Are you sure you want to delete user \"{{name}}\"?",
+    "userRequired": "First name, last name, and email are required",
+    "userUpdated": "User updated successfully",
+    "userAdded": "New user added successfully",
+    "userDeleted": "User deleted successfully",
+    "editPlc": "Edit PLC",
+    "plcNamePlaceholder": "Enter PLC name",
+    "connectionStatus": "Connection Status",
+    "warning": "Warning",
+    "plcUpdated": "PLC configuration updated successfully",
+    "firstNamePlaceholder": "Enter first name",
+    "lastNamePlaceholder": "Enter last name",
+    "emailPlaceholder": "Enter email address",
+    "departmentPlaceholder": "Enter department",
+    "positionPlaceholder": "Enter position",
+    "confirmDeleteUser": "Are you sure you want to delete user \"{{name}}\"?",
+    "confirmDeleteUserTitle": "Confirm User Deletion",
+    "confirmDeleteGroup": "Are you sure you want to delete product group \"{{name}}\" ({{code}})?",
+    "confirmDeleteGroupTitle": "Confirm Product Group Deletion",
+    "confirmDeleteStatus": "Are you sure you want to delete status \"{{label}}\"?",
+    "confirmDeleteStatusTitle": "Confirm Status Deletion",
+    "deleteButton": "Delete",
+    "cancelButton": "Cancel"
   },
   "customers": {
     "title": "Customer Management",
@@ -406,7 +447,8 @@
     "export": "Export",
     "import": "Import",
     "noCustomers": "No customers found",
-    "addCustomerStart": "Add a new customer to get started."
+    "addCustomerStart": "Add a new customer to get started.",
+    "representative": "Representative"
   },
   "products": {
     "title": "Product Management",
@@ -445,7 +487,10 @@
     "addProduct": "Add a new product to get started.",
     "testResult": "Test Results",
     "basicInfo": "Basic Information",
-    "orderInfo": "Order Information"
+    "orderInfo": "Order Information",
+    "category": "Category",
+    "specification": "Specification",
+    "unitPrice": "Unit Price"
   },
   "quality": {
     "title": "Quality Management",
@@ -511,7 +556,9 @@
     "csv": "CSV",
     "generateReportBtn": "Generate Report",
     "reportGenerated": "Report has been generated",
-    "reportGenerationFailed": "Report generation failed"
+    "reportGenerationFailed": "Report generation failed",
+    "inspection": "Inspection",
+    "remarks": "Remarks"
   },
   "inventory": {
     "title": "Inventory Management",
@@ -583,7 +630,10 @@
     "excelReadError": "Error occurred while reading Excel file.",
     "unsupportedFileFormat": "Unsupported file format. Please select CSV or Excel files.",
     "exportError": "Error occurred during export.",
-    "templateDownloadError": "Error occurred during template download."
+    "templateDownloadError": "Error occurred during template download.",
+    "item": "Item",
+    "stock": "Stock",
+    "lastUpdated": "Last Updated"
   },
   "equipment": {
     "title": "Equipment Management",
@@ -593,7 +643,7 @@
     "maintenanceEquipment": "Under Maintenance",
     "activeAlarms": "Active Alarms",
     "equipmentList": "Equipment List",
-    "equipmentId": "Equipment",
+    "equipmentId": "Equipment ID",
     "health": "Health",
     "temperature": "Temperature",
     "efficiency": "Efficiency",
@@ -636,7 +686,6 @@
     "equipmentList": "Equipment List",
     "equipmentListSubtitle": "Manage registered equipment",
     "equipmentName": "Equipment Name",
-    "equipmentId": "Equipment ID",
     "equipmentType": "Equipment Type",
     "equipmentLocation": "Equipment Location",
     "relatedProcess": "Related Process",
@@ -719,7 +768,10 @@
     "selectReportType": "Select report type to view preview",
     "dailyProductionReport": "Daily Production Report",
     "weeklyQualityReport": "Weekly Quality Report",
-    "monthlyEquipmentReport": "Monthly Equipment Report"
+    "monthlyEquipmentReport": "Monthly Equipment Report",
+    "period": "Period",
+    "generate": "Generate",
+    "export": "Export"
   },
   "messages": {
     "success": "Operation completed successfully",
@@ -833,176 +885,6 @@
     "admin": "Admin",
     "notifications": "Notifications"
   },
-  "admin": {
-    "title": "Admin Panel",
-    "loading": "Loading...",
-    "administrator": "Administrator",
-    "users": "Users",
-    "system": "System",
-    "apiKeys": "API Keys",
-    "plc": "PLC",
-    "line": "LINE",
-    "pages": "Pages",
-    "productGroups": "Product Groups",
-    "statusManagement": "Status Management",
-    "settings": "Settings",
-    "currentUser": "Current User",
-    "totalUsers": "Total Users",
-    "activeUsers": "Active Users",
-    "systemHealth": "System Health",
-    "database": "Database",
-    "api": "API",
-    "storage": "Storage",
-    "backup": "Backup",
-    "healthy": "Healthy",
-    "warning": "Warning",
-    "error": "Error",
-    "latency": "Latency",
-    "uptime": "Uptime",
-    "usage": "Usage",
-    "lastBackup": "Last Backup",
-    "plcConnections": "PLC Connections",
-    "connected": "Connected",
-    "disconnected": "Disconnected",
-    "lineNotifications": "LINE Notifications",
-    "enabled": "Enabled",
-    "disabled": "Disabled",
-    "pageMonitoring": "Page Monitoring",
-    "activeStatus": "Active",
-    "maintenanceStatus": "Maintenance",
-    "users": "users",
-    "errors": "errors"
-  },
-  "admin": {
-    "title": "Admin Panel",
-    "subtitle": "System Management and Monitoring",
-    "currentUser": "Current User",
-    "administrator": "Administrator",
-    "manager": "Manager",
-    "operator": "Operator",
-    "users": {
-      "title": "User Management",
-      "add": "Add User",
-      "edit": "Edit User",
-      "delete": "Delete User",
-      "status": "Status",
-      "role": "Role",
-      "department": "Department",
-      "lastLogin": "Last Login"
-    },
-    "system": {
-      "title": "System Status",
-      "refresh": "Refresh",
-      "database": "Database",
-      "api": "API",
-      "storage": "Storage",
-      "backup": "Backup",
-      "latency": "Latency",
-      "uptime": "Uptime",
-      "usage": "Usage",
-      "lastBackup": "Last Backup"
-    },
-    "apiKeys": {
-      "title": "API Key Management",
-      "add": "Add API Key",
-      "name": "Name",
-      "key": "Key",
-      "service": "Service",
-      "permissions": "Permissions",
-      "lastUsed": "Last Used"
-    },
-    "pages": {
-      "title": "Page Status",
-      "activeUsers": "Active Users",
-      "errors": "Errors"
-    },
-    "plc": {
-      "title": "PLC Data Management",
-      "refresh": "Refresh",
-      "totalPlc": "Total PLCs",
-      "connected": "Connected",
-      "disconnected": "Disconnected",
-      "warning": "Warning",
-      "totalDataPoints": "Total Data Points",
-      "plcList": "PLC Connection List",
-      "plcName": "PLC Name",
-      "connectionInfo": "Connection Info",
-      "protocol": "Protocol",
-      "status": "Status",
-      "dataPoints": "Data Points",
-      "errorCount": "Error Count",
-      "lastUpdate": "Last Update",
-      "actions": "Actions",
-      "realtimeData": "Real-time Data Points",
-      "analog": "Analog",
-      "digital": "Digital",
-      "address": "Address",
-      "value": "Value",
-      "unit": "Unit",
-      "on": "ON",
-      "off": "OFF",
-      "edit": "Edit Settings",
-      "details": "View Details",
-      "restart": "Restart Connection"
-    },
-    "settings": {
-      "title": "System Settings",
-      "systemName": "System Name",
-      "defaultLanguage": "Default Language",
-      "save": "Save Settings"
-    },
-    "line": {
-      "title": "LINE Notifications",
-      "settings": "LINE Notification Settings",
-      "botSettings": "LINE Bot Settings",
-      "channelAccessToken": "Channel Access Token",
-      "channelSecret": "Channel Secret",
-      "groupId": "Group ID",
-      "enabled": "Enabled",
-      "disabled": "Disabled",
-      "enable": "Enable LINE Notifications",
-      "testNotification": "Send Test Notification",
-      "connectionTest": "Connection Test",
-      "saveSettings": "Save Settings",
-      "testing": "Testing...",
-      "lastTest": "Last Test",
-      "notificationHistory": "Recent Notification History",
-      "type": "Type",
-      "title": "Title",
-      "message": "Message",
-      "sentTime": "Sent Time",
-      "status": "Status",
-      "recipients": "Recipients",
-      "sent": "Sent",
-      "failed": "Failed",
-      "pending": "Pending",
-      "systemAlert": "System Alert",
-      "productionAlert": "Production Alert",
-      "qualityAlert": "Quality Alert",
-      "maintenanceAlert": "Maintenance Alert",
-      "notificationSettings": "Notification Settings",
-      "plcStatusChange": "PLC Connection Status Change",
-      "systemError": "System Error Occurred",
-      "databaseError": "Database Connection Error",
-      "productionGoal": "Production Goal Achieved",
-      "qualityIssue": "Quality Issue Occurred",
-      "maintenanceRequired": "Equipment Maintenance Required",
-      "tokenRequired": "Channel Access Token is required",
-      "settingsNotComplete": "LINE settings are not complete",
-      "notificationDisabled": "LINE notifications are disabled",
-      "testSuccess": "LINE connection test successful!",
-      "testFailed": "Connection test failed",
-      "settingsSaved": "LINE settings saved successfully",
-      "settingsSaveFailed": "Failed to save settings",
-      "testSent": "Test notification sent successfully",
-      "testSendFailed": "Failed to send test notification",
-      "tokenPlaceholder": "Enter the Channel Access Token issued by LINE Developers",
-      "secretPlaceholder": "Enter Channel Secret",
-      "groupIdPlaceholder": "Ce966c1c8e8edb38428cf94c5657a89c5",
-      "tokenDescription": "Enter the Channel Access Token issued by LINE Developers.",
-      "groupIdDescription": "Add the bot to your LINE group and enter the Group ID. If empty, it will be sent to individual users."
-    }
-  },
   "process": {
     "title": "Process Management",
     "description": "Manage product processes and add new processes",
@@ -1038,10 +920,37 @@
     "deleteConfirmTitle": "Confirm Process Deletion",
     "processDescription": "Manage product processes and add new processes",
     "totalRequirements": "Total 0 requirements",
+    "process.status": "Process Status",
     "equipment": "Equipment",
     "capa": "CAPA",
     "workStatus": "Work Status",
     "selectEquipment": "Select Equipment",
-    "autoSetting": "auto-setting"
+    "autoSetting": "auto-setting",
+    "statusText": {
+      "processing": "0 production requests",
+      "completed": "Completed",
+      "paused": "Paused",
+      "waiting": "Waiting",
+      "unknown": "Unknown"
+    },
+    "statusLabel": {
+      "processing": "In Progress",
+      "completed": "Completed",
+      "paused": "Paused", 
+      "waiting": "Waiting"
+    },
+    "messages": {
+      "processDeleted": "Process \"{{name}}\" has been deleted.",
+      "processUpdated": "Process \"{{name}}\" has been updated.",
+      "processAdded": "Process \"{{name}}\" has been added.",
+      "exportSuccess": "Process data has been successfully exported.",
+      "exportError": "An error occurred during export.",
+      "importSuccess": "{{count}} processes have been successfully imported.{{errors}}",
+      "importWarning": " (some errors occurred)",
+      "importNoData": "No valid data to import.",
+      "importError": "An error occurred while reading the file.",
+      "requiredFieldsMissing": "Required fields are missing in row {{row}}.",
+      "autoClientPlaceholder": "Client will be set automatically when product is selected"
+    }
   }
 } 

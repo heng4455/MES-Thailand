@@ -2,7 +2,8 @@
   "name": "mes-thailand-frontend",
   "version": "1.0.0",
   "description": "MES Thailand Frontend - Electron + React App",
-  "main": "electron/main.js",
+  "author": "MES Thailand Team",
+  "main": "public/electron.js",
   "homepage": "./",
   "private": true,
   "scripts": {
@@ -14,6 +15,8 @@
     "electron": "electron .",
     "electron:build": "npm run build && electron-builder",
     "electron:dist": "npm run build && electron-builder --publish=never",
+    "desktop": "node run-desktop.js",
+    "demo:desktop": "npm run build && npm run desktop",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
@@ -50,7 +53,7 @@
     "autoprefixer": "^10.4.13",
     "concurrently": "^7.6.0",
     "cross-env": "^7.0.3",
-    "electron": "^23.1.0",
+    "electron": "23.1.0",
     "electron-builder": "^23.6.0",
     "postcss": "^8.4.21",
     "react-scripts": "5.0.1",
@@ -65,17 +68,26 @@
     },
     "files": [
       "build/**/*",
-      "electron/**/*",
+      "public/electron.js",
+      "public/preload.js",
       "node_modules/**/*"
     ],
     "mac": {
-      "category": "public.app-category.productivity"
+      "category": "public.app-category.productivity",
+      "target": "dmg"
     },
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "build/icon.ico"
     },
     "linux": {
       "target": "AppImage"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
     }
   },
   "browserslist": {

@@ -1,0 +1,29 @@
+directories:
+  output: dist
+  buildResources: assets
+files:
+  - filter:
+      - build/**/*
+      - build/**/*
+      - public/electron.js
+      - public/preload.js
+      - node_modules/**/*
+extraMetadata:
+  main: build/electron.js
+appId: com.mesThailand.app
+productName: MES Thailand
+mac:
+  category: public.app-category.productivity
+  target: dmg
+win:
+  target: nsis
+  icon: build/icon.ico
+linux:
+  target: AppImage
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+extends: react-cra
+electronVersion: 23.1.0

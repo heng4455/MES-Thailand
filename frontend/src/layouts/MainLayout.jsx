@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import logo from '../assets/logo.png';
 import { useUser } from '../contexts/UserContext';
+import DesktopDownload from '../components/DesktopDownload';
 
 const MainLayout = ({ children }) => {
   const { t, i18n } = useTranslation();
@@ -179,6 +180,9 @@ const MainLayout = ({ children }) => {
             </div>
 
             <div className="flex items-center space-x-4">
+              {/* 데스크톱 앱 다운로드 */}
+              <DesktopDownload />
+              
               {/* 언어 선택 */}
               <div className="relative">
                 <select
