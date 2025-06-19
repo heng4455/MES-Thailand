@@ -32,14 +32,14 @@ const DesktopDownload = () => {
 
   const currentOS = detectOS();
 
-  // 다운로드 링크 (실제 환경에서는 실제 빌드된 파일 링크로 교체)
+  // 다운로드 링크 - GitHub Releases에서 호스팅
   const downloadLinks = {
     windows: {
-      installer: '/downloads/MES-Thailand-Installer-1.0.0.exe', // NSIS 설치 프로그램
-      portable: '/downloads/MES-Thailand-Portable-1.0.0.exe'    // 포터블 버전
+      installer: 'https://github.com/heng4455/MES-Thailand/releases/download/v1.0.0/MES-Thailand-Installer-1.0.0.exe',
+      portable: 'https://github.com/heng4455/MES-Thailand/releases/download/v1.0.0/MES-Thailand-Portable-1.0.0.exe'
     },
-    mac: '/downloads/MES-Thailand-1.0.0.dmg',
-    linux: '/downloads/MES-Thailand-1.0.0.AppImage'
+    mac: 'https://github.com/heng4455/MES-Thailand/releases/download/v1.0.0/MES-Thailand-1.0.0.dmg',
+    linux: 'https://github.com/heng4455/MES-Thailand/releases/download/v1.0.0/MES-Thailand-1.0.0.AppImage'
   };
 
   const osNames = {
