@@ -1,0 +1,41 @@
+# 개발 의존성
+node_modules
+
+# Electron 관련
+electron/
+run-desktop.js
+build-desktop.ps1
+build-desktop.bat
+build-clean.ps1
+
+# 큰 바이너리 파일들
+public/downloads/*.exe
+public/downloads/*.dmg
+public/downloads/*.AppImage
+
+# 빌드 관련
+dist/
+C:\temp\
+
+# 개발 파일들
+*.log
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# OS 파일들
+.DS_Store
+Thumbs.db
+
+# IDE 파일들
+.vscode/
+.idea/
+
+# 문서 파일들
+*.md
+LICENSE
+
+# 기타
+simple-build.json
+installer.nsi 
