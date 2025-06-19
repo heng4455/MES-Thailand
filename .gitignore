@@ -5,7 +5,13 @@ backend/node_modules/
 
 # Build outputs
 frontend/build/
+frontend/dist/
 backend/dist/
+
+# Large binary files (Desktop app installers)
+frontend/public/downloads/*.exe
+frontend/public/downloads/*.dmg
+frontend/public/downloads/*.AppImage
 
 # Environment variables
 .env
