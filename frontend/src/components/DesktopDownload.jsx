@@ -8,6 +8,19 @@ const DesktopDownload = () => {
   const [showModal, setShowModal] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
+  // Electron 환경 감지 - 데스크톱 앱에서는 다운로드 버튼을 숨김
+  const isElectron = () => {
+    return window.electronAPI || 
+           window.MES_CONFIG || 
+           navigator.userAgent.toLowerCase().indexOf('electron') > -1 ||
+           window.process?.type;
+  };
+
+  // 데스크톱 앱에서는 컴포넌트를 렌더링하지 않음
+  if (isElectron()) {
+    return null;
+  }
+
   // 현재 OS 감지
   const detectOS = () => {
     const userAgent = window.navigator.userAgent;
