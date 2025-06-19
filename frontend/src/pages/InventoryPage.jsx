@@ -18,6 +18,7 @@ import {
 } from 'react-icons/fi';
 import * as XLSX from 'xlsx';
 import Toast from '../components/Toast';
+import { inventoryAPI, productsAPI } from '../utils/supabase';
 
 const InventoryPage = () => {
   const { t } = useTranslation();
@@ -27,6 +28,8 @@ const InventoryPage = () => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showImportMenu, setShowImportMenu] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [inventoryData, setInventoryData] = useState([]);
 
   // 드롭다운 메뉴 외부 클릭 시 닫기
   useEffect(() => {
@@ -53,7 +56,7 @@ const InventoryPage = () => {
     code: '',
     nameKo: '',
     nameEn: '',
-    category: 'raw_material',
+      category: 'raw_material',
     currentStock: '',
     unit: '',
     minStock: '',
@@ -63,72 +66,61 @@ const InventoryPage = () => {
     supplier: ''
   });
   
-  const [inventoryData, setInventoryData] = useState([
-    {
-      id: 1,
-      code: 'MTL-001',
-      nameKo: '스테인리스 스틸 304',
-      nameEn: 'Stainless Steel 304',
-      category: 'raw_material',
-      currentStock: 250,
-      minStock: 100,
-      maxStock: 500,
-      unit: 'kg',
-      unitPrice: 8500,
-      supplier: '한국철강',
-      location: 'A-01-01',
-      lastUpdated: '2024-01-15T10:30:00',
-      status: 'normal'
-    },
-    {
-      id: 2,
-      code: 'CMP-002',
-      nameKo: '베어링 6202',
-      nameEn: 'Bearing 6202',
-      category: 'component',
-      currentStock: 45,
-      minStock: 50,
-      maxStock: 200,
-      unit: 'EA',
-      unitPrice: 12000,
-      supplier: 'NSK Korea',
-      location: 'B-02-03',
-      lastUpdated: '2024-01-14T15:20:00',
-      status: 'low_stock'
-    },
-    {
-      id: 3,
-      code: 'FIN-003',
-      nameKo: '완성품 A타입',
-      nameEn: 'Finished Product Type A',
-      category: 'finished_product',
-      currentStock: 120,
-      minStock: 80,
-      maxStock: 300,
-      unit: 'EA',
-      unitPrice: 75000,
-      supplier: '자체생산',
-      location: 'C-01-05',
-      lastUpdated: '2024-01-15T09:45:00',
-      status: 'normal'
-    },
-    {
-      id: 4,
-      code: 'TL-004',
-      nameKo: '드릴 비트 10mm',
-      nameEn: 'Drill Bit 10mm',
-      category: 'tool',
-      currentStock: 5,
-      minStock: 20,
-      maxStock: 100,
-      unit: 'EA',
-      unitPrice: 25000,
-      supplier: '삼성도구',
-      location: 'D-01-02',
-      lastUpdated: '2024-01-13T14:30:00',
-      status: 'critical'
+  // 실제 재고 데이터 로드
+  useEffect(() => {
+    loadInventoryData();
+  }, []);
+
+  const loadInventoryData = async () => {
+    try {
+      setLoading(true);
+      const result = await inventoryAPI.getInventory();
+      
+      if (result.success) {
+        // 데이터 변환 및 상태 계산
+        const processedData = result.data.map(item => {
+          const currentStock = item.current_quantity || 0;
+          const minStock = item.min_quantity || 0;
+          const maxStock = item.max_quantity || 0;
+          
+          let status = 'normal';
+          if (currentStock <= 0) {
+            status = 'critical';
+          } else if (currentStock <= minStock) {
+            status = 'low_stock';
+          } else if (currentStock >= maxStock) {
+            status = 'overstock';
+          }
+          
+          return {
+            id: item.id,
+            code: item.products?.product_code || item.product_code || `INV-${item.id}`,
+            nameKo: item.products?.product_name || item.product_name || 'N/A',
+            nameEn: item.products?.product_name_en || item.products?.product_name || 'N/A',
+            category: item.products?.category || 'raw_material',
+            currentStock: currentStock,
+            minStock: minStock,
+            maxStock: maxStock,
+            unit: item.products?.unit || item.unit || 'EA',
+            unitPrice: item.unit_cost || 0,
+            supplier: item.supplier_name || 'N/A',
+            location: item.location || `${item.warehouses?.code || 'WH'}-${item.location_code || '001'}`,
+            lastUpdated: item.updated_at || item.created_at,
+            status: status
+          };
+        });
+        
+        setInventoryData(processedData);
+      } else {
+        showToast('재고 데이터 로드 실패', 'error');
+      }
+    } catch (error) {
+      console.error('재고 데이터 로드 오류:', error);
+      showToast('재고 데이터 로드 중 오류가 발생했습니다.', 'error');
+    } finally {
+      setLoading(false);
     }
-  ]);
+  };
 
   const categories = [
     { value: 'all', label: t('inventory.allCategories') },
@@ -232,56 +224,75 @@ const InventoryPage = () => {
     setShowAddModal(true);
   };
 
-  const handleDeleteItem = (id) => {
+  const handleDeleteItem = async (id) => {
     if (window.confirm(t('inventory.confirmDelete'))) {
-      setInventoryData(prev => prev.filter(item => item.id !== id));
-      showToast(t('inventory.itemDeleted'), 'success');
+      try {
+        const result = await inventoryAPI.delete(id);
+        if (result.success) {
+          showToast(t('inventory.itemDeletedSuccess'), 'success');
+          await loadInventoryData();
+        } else {
+          showToast(t('inventory.deleteFailed'), 'error');
+        }
+      } catch (error) {
+        console.error('Inventory delete error:', error);
+        showToast(t('common.deleteError'), 'error');
+      }
     }
   };
 
-  const handleSaveItem = () => {
+  const handleSaveItem = async () => {
     if (!formData.code || !formData.nameKo || !formData.currentStock) {
-      showToast('필수 필드를 모두 입력해주세요.', 'error');
+      showToast(t('common.fillAllFields'), 'error');
       return;
     }
 
-    if (selectedItem) {
-      // 수정 모드
-      setInventoryData(prev => prev.map(item => 
-        item.id === selectedItem.id 
-          ? {
-              ...item,
-              ...formData,
-              currentStock: parseInt(formData.currentStock),
-              minStock: parseInt(formData.minStock),
-              maxStock: parseInt(formData.maxStock),
-              unitPrice: parseInt(formData.unitPrice),
-              lastUpdated: new Date().toISOString(),
-              status: parseInt(formData.currentStock) <= parseInt(formData.minStock) / 2 ? 'critical' :
-                      parseInt(formData.currentStock) <= parseInt(formData.minStock) ? 'low_stock' : 'normal'
-            }
-          : item
-      ));
-      showToast(t('inventory.itemUpdated'), 'success');
-    } else {
-      // 추가 모드
-      const newItem = {
-        id: Date.now(),
-        ...formData,
-        currentStock: parseInt(formData.currentStock),
-        minStock: parseInt(formData.minStock),
-        maxStock: parseInt(formData.maxStock),
-        unitPrice: parseInt(formData.unitPrice),
-        lastUpdated: new Date().toISOString(),
-        status: parseInt(formData.currentStock) <= parseInt(formData.minStock) / 2 ? 'critical' :
-                parseInt(formData.currentStock) <= parseInt(formData.minStock) ? 'low_stock' : 'normal'
+    try {
+      const inventoryItemData = {
+        product_code: formData.code,
+        product_name: formData.nameKo,
+        product_name_en: formData.nameEn || formData.nameKo,
+        category: formData.category,
+        current_quantity: parseInt(formData.currentStock),
+        min_quantity: parseInt(formData.minStock) || 0,
+        max_quantity: parseInt(formData.maxStock) || 0,
+        unit: formData.unit || 'EA',
+        unit_cost: parseFloat(formData.unitPrice) || 0,
+        supplier_name: formData.supplier || 'N/A',
+        location: formData.location || 'WH-001',
+        location_code: formData.location || '001'
       };
-      setInventoryData(prev => [...prev, newItem]);
-      showToast(t('inventory.itemAdded'), 'success');
+
+      let result;
+      if (selectedItem) {
+        // 수정 모드
+        result = await inventoryAPI.update(selectedItem.id, inventoryItemData);
+        if (result.success) {
+          showToast(t('inventory.itemUpdatedSuccess'), 'success');
+        } else {
+          showToast(t('inventory.updateFailed'), 'error');
+          return;
+        }
+      } else {
+        // 추가 모드
+        result = await inventoryAPI.create(inventoryItemData);
+        if (result.success) {
+          showToast(t('inventory.itemAddedSuccess'), 'success');
+        } else {
+          showToast(t('inventory.addFailed'), 'error');
+          return;
+        }
+      }
+
+      // 성공 시 데이터 새로고침
+      await loadInventoryData();
+      setShowAddModal(false);
+      resetForm();
+      setSelectedItem(null);
+    } catch (error) {
+      console.error('Inventory save error:', error);
+      showToast(t('common.saveError'), 'error');
     }
-    
-    setShowAddModal(false);
-    resetForm();
   };
 
   const handleInputChange = (field, value) => {
@@ -609,6 +620,34 @@ const InventoryPage = () => {
     return category ? category.value : null;
   };
 
+  if (loading) {
+    return (
+      <div className="p-6 space-y-6 bg-gray-100 min-h-full">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-1/4 mb-2"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <div className="animate-pulse">
+                <div className="h-16 bg-gray-200 rounded mb-4"></div>
+                <div className="h-4 bg-gray-200 rounded"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="animate-pulse">
+            <div className="h-96 bg-gray-200 rounded"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6 bg-gray-100 min-h-full">
       {/* Toast 컴포넌트 */}
@@ -626,22 +665,22 @@ const InventoryPage = () => {
         className="bg-white rounded-lg shadow-sm border border-gray-200 p-6"
       >
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3">
             <FiPackage className="text-3xl text-purple-600" />
             <div>
               <h1 className="text-2xl font-bold text-gray-900">{t('inventory.title')}</h1>
               <p className="text-gray-600 text-sm">{t('inventory.subtitle')}</p>
             </div>
-          </div>
-          
-          <div className="flex items-center gap-3">
+        </div>
+        
+        <div className="flex items-center gap-3">
             {/* Import 드롭다운 메뉴 */}
             <div className="relative import-dropdown">
-              <button
+          <button
                 onClick={() => setShowImportMenu(!showImportMenu)}
-                className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
-              >
-                <FiUpload size={16} />
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+          >
+            <FiUpload size={16} />
                 {t('inventory.import')}
                 <FiChevronDown size={14} />
               </button>
@@ -658,8 +697,8 @@ const InventoryPage = () => {
                      >
                        <FiUpload size={14} />
                        {t('inventory.importFromFile')}
-                     </button>
-                     <button
+          </button>
+          <button
                        onClick={() => {
                          handleDownloadTemplate();
                          setShowImportMenu(false);
@@ -678,9 +717,9 @@ const InventoryPage = () => {
             <div className="relative export-dropdown">
               <button
                 onClick={() => setShowExportMenu(!showExportMenu)}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
-              >
-                <FiDownload size={16} />
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+          >
+            <FiDownload size={16} />
                 {t('inventory.export')}
                 <FiChevronDown size={14} />
               </button>
@@ -697,7 +736,7 @@ const InventoryPage = () => {
                      >
                        <FiDownload size={14} />
                        {t('inventory.excelFile')}
-                     </button>
+          </button>
                      <button
                        onClick={() => {
                          handleExport('csv');
@@ -714,12 +753,20 @@ const InventoryPage = () => {
             </div>
             
             <button
-              onClick={handleAddItem}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              onClick={loadInventoryData}
+              className="flex items-center gap-2 px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
             >
-              <FiPlus size={16} />
-              {t('inventory.addItem')}
+              <FiPackage size={16} />
+              새로고침
             </button>
+            
+          <button
+            onClick={handleAddItem}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+          >
+            <FiPlus size={16} />
+              {t('inventory.addItem')}
+          </button>
           </div>
         </div>
       </motion.div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { 
   BarChart3, TrendingUp, Download, Calendar, Filter, 
@@ -40,29 +40,72 @@ const ReportsPage = () => {
     }
   ];
 
-  const recentReports = [
-    {
-      id: 1,
-      name: t('reports.dailyProductionReport'),
-      date: '2024-06-16',
-      type: 'production',
-      status: 'completed'
-    },
-    {
-      id: 2,
-      name: t('reports.weeklyQualityReport'),
-      date: '2024-06-15',
-      type: 'quality',
-      status: 'completed'
-    },
-    {
-      id: 3,
-      name: t('reports.monthlyEquipmentReport'),
-      date: '2024-06-14',
-      type: 'equipment',
-      status: 'processing'
+  // 실제 리포트 데이터 상태
+  const [recentReports, setRecentReports] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // 리포트 데이터 로드
+  useEffect(() => {
+    loadReportsData();
+  }, []);
+
+  const loadReportsData = async () => {
+    try {
+      setLoading(true);
+      // 실제 리포트 API 호출 대신 기본 데이터 생성
+      const mockReports = [
+        {
+          id: 1,
+          name: t('reports.dailyProductionReport'),
+          date: new Date().toISOString().split('T')[0],
+          type: 'production',
+          status: 'completed'
+        },
+        {
+          id: 2,
+          name: t('reports.weeklyQualityReport'),
+          date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
+          type: 'quality',
+          status: 'completed'
+        },
+        {
+          id: 3,
+          name: t('reports.monthlyEquipmentReport'),
+          date: new Date(Date.now() - 172800000).toISOString().split('T')[0],
+          type: 'equipment',
+          status: 'processing'
+        }
+      ];
+      setRecentReports(mockReports);
+    } catch (error) {
+      console.error('리포트 데이터 로드 오류:', error);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  if (loading) {
+    return (
+      <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-1/4 mb-2"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+              <div className="animate-pulse">
+                <div className="h-16 bg-gray-200 rounded mb-4"></div>
+                <div className="h-4 bg-gray-200 rounded"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
@@ -74,7 +117,10 @@ const ReportsPage = () => {
             <p className="text-gray-600 mt-1">{t('reports.subtitle')}</p>
           </div>
           <div className="flex space-x-2">
-            <button className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center space-x-2">
+            <button 
+              onClick={loadReportsData}
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center space-x-2"
+            >
               <FileText className="w-4 h-4" />
               <span>{t('reports.newReport')}</span>
             </button>

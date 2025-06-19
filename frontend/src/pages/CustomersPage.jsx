@@ -24,6 +24,7 @@ import * as XLSX from 'xlsx';
 import Modal from '../components/Modal';
 import ConfirmDialog from '../components/ConfirmDialog';
 import Toast from '../components/Toast';
+import { customersAPI } from '../utils/supabase';
 
 const CustomersPage = () => {
   const { t } = useTranslation();
@@ -50,87 +51,46 @@ const CustomersPage = () => {
     status: 'active'
   });
 
-  // 샘플 고객 데이터
+  // 실제 고객 데이터 로드
   useEffect(() => {
-    // 실제 구현에서는 API에서 데이터를 가져옴
-    const mockCustomers = [
-      {
-        id: 1,
-        customerName: 'MOBIS',
-        companyName: '현대모비스',
-        contact: '김철수',
-        email: 'kim.cs@mobis.co.kr',
-        phone: '+82-2-1234-5678',
-        address: '서울특별시 강남구 테헤란로 123',
-        status: 'active',
-        registrationDate: '2025-06-11',
-        lastOrderDate: '2025-06-15',
-        totalOrders: 4,
-        activeProjects: 2
-      },
-      {
-        id: 2,
-        customerName: 'LG VS',
-        companyName: 'LG전자 VS사업부',
-        contact: '박영희',
-        email: 'park.yh@lge.com',
-        phone: '+82-2-2222-3333',
-        address: '서울특별시 영등포구 여의도동 456',
-        status: 'active',
-        registrationDate: '2025-06-11',
-        lastOrderDate: '2025-06-14',
-        totalOrders: 6,
-        activeProjects: 3
-      },
-      {
-        id: 3,
-        customerName: 'HL Clemove',
-        companyName: 'HL클레무브',
-        contact: '이민수',
-        email: 'lee.ms@hlclemove.com',
-        phone: '+82-31-5555-7777',
-        address: '경기도 수원시 영통구 789번길',
-        status: 'active',
-        registrationDate: '2025-06-11',
-        lastOrderDate: '2025-06-13',
-        totalOrders: 7,
-        activeProjects: 1
-      },
-      {
-        id: 4,
-        customerName: 'Samsung SDI',
-        companyName: '삼성SDI',
-        contact: '최진아',
-        email: 'choi.ja@samsungsdi.com',
-        phone: '+82-31-8888-9999',
-        address: '경기도 용인시 기흥구 삼성로 111',
-        status: 'inactive',
-        registrationDate: '2025-05-20',
-        lastOrderDate: '2025-05-25',
-        totalOrders: 2,
-        activeProjects: 0
-      },
-      {
-        id: 5,
-        customerName: 'SK Innovation',
-        companyName: 'SK이노베이션',
-        contact: '정우석',
-        email: 'jung.ws@skinnovation.com',
-        phone: '+82-2-7777-1111',
-        address: '서울특별시 종로구 종로 26',
-        status: 'pending',
-        registrationDate: '2025-06-10',
-        lastOrderDate: null,
-        totalOrders: 0,
-        activeProjects: 0
-      }
-    ];
-
-    setTimeout(() => {
-      setCustomers(mockCustomers);
-      setIsLoading(false);
-    }, 1000);
+    loadCustomers();
   }, []);
+
+  const loadCustomers = async () => {
+    try {
+      setIsLoading(true);
+      const result = await customersAPI.getAll();
+      
+      if (result.success) {
+        // Supabase 데이터를 UI 형식으로 변환
+        const formattedCustomers = result.data.map(customer => ({
+          id: customer.id,
+          customerName: customer.customer_name,
+          companyName: customer.company_name,
+          contact: customer.contact,
+          email: customer.email,
+          phone: customer.phone,
+          address: customer.address,
+          status: customer.status,
+          registrationDate: customer.registration_date,
+          lastOrderDate: customer.last_order_date,
+          totalOrders: customer.total_orders || 0,
+          activeProjects: customer.active_projects || 0
+        }));
+        
+        setCustomers(formattedCustomers);
+      } else {
+        showToastMessage(t('customers.loadFailed'), 'error');
+        setCustomers([]);
+      }
+    } catch (error) {
+      console.error('Customer data load error:', error);
+      showToastMessage(t('common.dataLoadError'), 'error');
+      setCustomers([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // 필터링된 고객 목록
   const filteredCustomers = customers.filter(customer => {
@@ -197,35 +157,80 @@ const CustomersPage = () => {
     setShowDeleteDialog(true);
   };
 
-  const confirmDelete = () => {
-    setCustomers(customers.filter(c => c.id !== selectedCustomer.id));
-    setShowDeleteDialog(false);
-    setSelectedCustomer(null);
+  const confirmDelete = async () => {
+    try {
+      const result = await customersAPI.delete(selectedCustomer.id);
+      if (result.success) {
+        setCustomers(customers.filter(c => c.id !== selectedCustomer.id));
+        showToastMessage(t('customers.customerDeletedSuccess'), 'success');
+      } else {
+        showToastMessage(t('customers.deleteFailed'), 'error');
+      }
+    } catch (error) {
+      console.error('Customer delete error:', error);
+      showToastMessage(t('customers.deleteFailed'), 'error');
+    } finally {
+      setShowDeleteDialog(false);
+      setSelectedCustomer(null);
+    }
   };
 
-  const handleSave = () => {
-    if (selectedCustomer) {
-      // 수정
-      setCustomers(customers.map(c => 
-        c.id === selectedCustomer.id 
-          ? { ...c, ...formData }
-          : c
-      ));
-      setShowEditModal(false);
-    } else {
-      // 새 고객 추가
-      const newCustomer = {
-        id: Date.now(),
-        ...formData,
-        registrationDate: new Date().toISOString().split('T')[0],
-        lastOrderDate: null,
-        totalOrders: 0,
-        activeProjects: 0
-      };
-      setCustomers([...customers, newCustomer]);
-      setShowAddModal(false);
+  const handleSave = async () => {
+    try {
+      if (selectedCustomer) {
+        // 수정
+        const result = await customersAPI.update(selectedCustomer.id, formData);
+        if (result.success) {
+          // 로컬 state 업데이트
+          setCustomers(customers.map(c => 
+            c.id === selectedCustomer.id 
+              ? { 
+                  ...c, 
+                  customerName: formData.customerName,
+                  companyName: formData.companyName,
+                  contact: formData.contact,
+                  email: formData.email,
+                  phone: formData.phone,
+                  address: formData.address,
+                  status: formData.status
+                }
+              : c
+          ));
+          showToastMessage(t('customers.customerUpdatedSuccess'), 'success');
+          setShowEditModal(false);
+        } else {
+          showToastMessage(t('customers.updateFailed'), 'error');
+        }
+      } else {
+        // 새 고객 추가
+        const result = await customersAPI.create(formData);
+        if (result.success) {
+          const newCustomer = {
+            id: result.data.id,
+            customerName: result.data.customer_name,
+            companyName: result.data.company_name,
+            contact: result.data.contact,
+            email: result.data.email,
+            phone: result.data.phone,
+            address: result.data.address,
+            status: result.data.status,
+            registrationDate: result.data.registration_date,
+            lastOrderDate: result.data.last_order_date,
+            totalOrders: result.data.total_orders || 0,
+            activeProjects: result.data.active_projects || 0
+          };
+          setCustomers([...customers, newCustomer]);
+          showToastMessage(t('customers.customerAddedSuccess'), 'success');
+          setShowAddModal(false);
+        } else {
+          showToastMessage(t('customers.addFailed'), 'error');
+        }
+      }
+      resetForm();
+    } catch (error) {
+      console.error('Customer save error:', error);
+      showToastMessage(selectedCustomer ? t('customers.updateFailed') : t('customers.addFailed'), 'error');
     }
-    resetForm();
   };
 
   const resetForm = () => {
@@ -297,10 +302,10 @@ const CustomersPage = () => {
       const fileName = `고객목록_${new Date().toISOString().split('T')[0]}.xlsx`;
       XLSX.writeFile(wb, fileName);
       
-      showToastMessage('고객 데이터가 성공적으로 내보내졌습니다.', 'success');
+      showToastMessage(t('customers.customerExported'), 'success');
     } catch (error) {
       console.error('Export error:', error);
-      showToastMessage('내보내기 중 오류가 발생했습니다.', 'error');
+      showToastMessage(t('customers.fileReadError'), 'error');
     }
   };
 
@@ -371,16 +376,16 @@ const CustomersPage = () => {
         if (importedCustomers.length > 0) {
           setCustomers(prev => [...prev, ...importedCustomers]);
           showToastMessage(
-            `${importedCustomers.length}개의 고객이 성공적으로 가져와졌습니다.${hasErrors ? ' (일부 오류 있음)' : ''}`,
+            t('customers.customerImported', { count: importedCustomers.length }),
             hasErrors ? 'warning' : 'success'
           );
         } else {
-          showToastMessage('가져올 수 있는 유효한 데이터가 없습니다.', 'error');
+          showToastMessage(t('customers.fileReadError'), 'error');
         }
 
       } catch (error) {
         console.error('Import error:', error);
-        showToastMessage('파일을 읽는 중 오류가 발생했습니다.', 'error');
+        showToastMessage(t('customers.fileReadError'), 'error');
       }
     };
 

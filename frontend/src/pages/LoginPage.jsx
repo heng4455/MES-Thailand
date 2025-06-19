@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import logo from '../assets/logo.png';
 import { authHelpers } from '../utils/supabase';
 import { useUser } from '../contexts/UserContext';
+import LanguageSelector from '../components/LanguageSelector';
 
 const LoginPage = () => {
   const { t } = useTranslation();
@@ -34,7 +35,7 @@ const LoginPage = () => {
       if (result.success) {
         const { user, session } = result.data;
         
-        toast.success('로그인 성공!');
+        toast.success(t('auth.loginSuccess'));
         localStorage.setItem('supabase_session', JSON.stringify(session));
         
         // 짧은 지연 후 리다이렉트 (사용자 경험 개선)
@@ -55,30 +56,30 @@ const LoginPage = () => {
         // 특정 오류 타입에 따른 메시지 처리
         switch (result.error) {
           case 'EMAIL_NOT_CONFIRMED':
-            toast.error('이메일 인증이 필요합니다. 이메일을 확인해주세요.');
+            toast.error(t('auth.emailVerificationRequired'));
             break;
           case 'APPROVAL_PENDING':
-            toast.error('관리자 승인 대기 중입니다. 승인이 완료될 때까지 기다려주세요.', {
+            toast.error(t('auth.approvalPending'), {
               duration: 6000
             });
             break;
           case 'APPROVAL_REJECTED':
-            toast.error('계정 승인이 거부되었습니다. 관리자에게 문의하세요.', {
+            toast.error(t('auth.approvalRejected'), {
               duration: 6000
             });
             break;
           case 'APPROVAL_REQUIRED':
-            toast.error('계정 승인이 필요합니다. 관리자에게 문의하세요.', {
+            toast.error(t('auth.approvalRequired'), {
               duration: 6000
             });
             break;
           default:
             if (result.error.includes('Invalid login credentials')) {
-              toast.error('이메일 또는 비밀번호가 올바르지 않습니다');
+              toast.error(t('auth.invalidCredentials'));
             } else if (result.message) {
               toast.error(result.message);
             } else {
-              toast.error(result.error || '로그인 중 오류가 발생했습니다');
+              toast.error(result.error || t('auth.loginError'));
             }
         }
         setIsLoading(false);
@@ -86,7 +87,7 @@ const LoginPage = () => {
       
     } catch (error) {
       console.error('Login error:', error);
-      toast.error('로그인 중 오류가 발생했습니다');
+      toast.error(t('auth.loginError'));
       setIsLoading(false);
     }
   };
@@ -95,7 +96,7 @@ const LoginPage = () => {
     const email = watch('email');
     
     if (!email) {
-      toast.error('이메일을 먼저 입력해주세요');
+      toast.error(t('auth.enterEmailFirst'));
       return;
     }
     
@@ -103,13 +104,13 @@ const LoginPage = () => {
       const result = await authHelpers.resetPassword(email);
       
       if (result.success) {
-        toast.success('비밀번호 재설정 링크를 이메일로 발송했습니다');
+        toast.success(t('auth.passwordResetSent'));
       } else {
-        toast.error(result.error || '비밀번호 재설정 요청에 실패했습니다');
+        toast.error(result.error || t('auth.passwordResetError'));
       }
     } catch (error) {
       console.error('Forgot password error:', error);
-      toast.error('비밀번호 재설정 요청 중 오류가 발생했습니다');
+      toast.error(t('auth.passwordResetError'));
     }
   };
 
@@ -129,15 +130,20 @@ const LoginPage = () => {
   const handleLogout = async () => {
     try {
       await signOut();
-      toast.success('로그아웃되었습니다');
+      toast.success(t('auth.logout'));
     } catch (error) {
       console.error('Logout error:', error);
-      toast.error('로그아웃 중 오류가 발생했습니다');
+      toast.error(t('auth.loginError'));
     }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center py-12 px-4">
+      {/* 언어 선택기 */}
+      <div className="absolute top-6 right-6">
+        <LanguageSelector />
+      </div>
+
       <div className="max-w-md w-full">
         {/* 현재 로그인된 사용자 정보 표시 */}
         {!loading && user && (
@@ -155,20 +161,20 @@ const LoginPage = () => {
               
               <div>
                 <h3 className="text-lg font-semibold text-green-800">
-                  이미 로그인되어 있습니다
+                  {t('auth.alreadyLoggedIn')}
                 </h3>
-                                 <p className="text-green-600 mt-1">
-                   <strong>사용자:</strong> {userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : 
-                   user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || user.email}
-                 </p>
+                <p className="text-green-600 mt-1">
+                  <strong>{t('auth.user')}:</strong> {userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : 
+                  user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || user.email}
+                </p>
                 {userProfile?.role && (
                   <p className="text-green-600 text-sm">
-                    <strong>역할:</strong> {userProfile.role}
+                    <strong>{t('auth.role')}:</strong> {userProfile.role}
                   </p>
                 )}
                 {userProfile?.department && (
                   <p className="text-green-600 text-sm">
-                    <strong>부서:</strong> {userProfile.department}
+                    <strong>{t('auth.department')}:</strong> {userProfile.department}
                   </p>
                 )}
               </div>
@@ -178,18 +184,18 @@ const LoginPage = () => {
                   onClick={() => navigate('/dashboard')}
                   className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
                 >
-                  대시보드로 이동
+                  {t('auth.goToDashboard')}
                 </button>
                 <button
                   onClick={handleLogout}
                   className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
                 >
-                  로그아웃
+                  {t('auth.logout')}
                 </button>
               </div>
               
               <p className="text-green-600 text-xs">
-                1초 후 자동으로 대시보드로 이동됩니다
+                {t('auth.autoRedirect')}
               </p>
             </div>
           </motion.div>
@@ -207,62 +213,36 @@ const LoginPage = () => {
             
             <div>
               <h2 className="text-3xl font-bold text-gray-900">
-                로그인
+                {t('auth.login')}
               </h2>
               <p className="text-gray-600 mt-2">
-                MES Thailand에 오신 것을 환영합니다
+                {t('auth.loginSubtitle')}
               </p>
             </div>
           </div>
 
-          {/* Supabase 인증 안내 */}
-          <div className="mb-6 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-sm text-blue-700 text-center">
-              <strong>Supabase 이메일 인증:</strong><br />
-              회원가입 후 이메일을 확인하여 인증을 완료해주세요<br />
-              이메일 인증 후 로그인이 가능합니다
-            </p>
-          </div>
 
-          {/* 테스트 계정 빠른 로그인 */}
-          <div className="mb-6 p-3 bg-green-50 border border-green-200 rounded-lg">
-            <p className="text-sm text-green-700 text-center mb-2">
-              <strong>테스트 계정으로 빠른 로그인:</strong>
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                // 테스트 계정 정보로 폼 자동 채우기
-                document.querySelector('input[name="email"]').value = 'test@example.com';
-                document.querySelector('input[name="password"]').value = 'test123456';
-                
-                // 자동 로그인 시도
-                handleLogin({ email: 'test@example.com', password: 'test123456' });
-              }}
-              className="w-full px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
-            >
-              테스트 계정으로 로그인 (test@example.com)
-            </button>
-          </div>
+
+
 
           {/* 로그인 폼 */}
           <form onSubmit={handleSubmit(handleLogin)} className="space-y-6">
             {/* 이메일 입력 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                이메일
+                {t('auth.email')}
               </label>
               <input
                 type="email"
                 {...register('email', {
-                  required: '이메일을 입력해주세요',
+                  required: t('auth.emailRequired'),
                   pattern: {
                     value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                    message: '올바른 이메일 형식을 입력해주세요'
+                    message: t('auth.emailInvalid')
                   }
                 })}
                 className="block w-full px-3 py-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                placeholder="example@company.com"
+                placeholder={t('auth.emailPlaceholder')}
                 disabled={!loading && user}
               />
               {errors.email && (
@@ -275,20 +255,20 @@ const LoginPage = () => {
             {/* 비밀번호 입력 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                비밀번호
+                {t('auth.password')}
               </label>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
                   {...register('password', {
-                    required: '비밀번호를 입력해주세요',
+                    required: t('auth.passwordRequired'),
                     minLength: {
                       value: 6,
-                      message: '비밀번호는 최소 6자 이상이어야 합니다'
+                      message: t('auth.passwordMinLength')
                     }
                   })}
                   className="block w-full px-3 py-3 pr-12 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  placeholder="••••••••"
+                  placeholder={t('auth.passwordPlaceholder')}
                   disabled={!loading && user}
                 />
                 <button
@@ -317,7 +297,7 @@ const LoginPage = () => {
                   disabled={!loading && user}
                 />
                 <span className="ml-2 text-sm text-gray-700">
-                  로그인 상태 유지
+                  {t('auth.rememberMe')}
                 </span>
               </label>
 
@@ -327,7 +307,7 @@ const LoginPage = () => {
                 className="text-sm text-blue-600 hover:text-blue-500 transition-colors"
                 disabled={!loading && user}
               >
-                비밀번호 찾기
+                {t('auth.forgotPassword')}
               </button>
             </div>
 
@@ -340,12 +320,12 @@ const LoginPage = () => {
               {isLoading ? (
                 <div className="flex items-center">
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                  로그인 중...
+                  {t('auth.loggingIn')}
                 </div>
               ) : (!loading && user) ? (
-                '이미 로그인됨'
+                t('auth.alreadyLoggedIn')
               ) : (
-                '로그인'
+                t('auth.signIn')
               )}
             </button>
 
@@ -359,7 +339,7 @@ const LoginPage = () => {
                 }}
                 className="w-full mt-3 flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-lg text-sm font-medium text-white bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200"
               >
-                🚀 대시보드로 이동하기
+                🚀 {t('auth.goToDashboard')}
               </button>
             )}
           </form>
@@ -367,12 +347,12 @@ const LoginPage = () => {
           {/* 회원가입 링크 */}
           <div className="mt-6 text-center">
             <p className="text-gray-600">
-              계정이 없으신가요?{' '}
+              {t('auth.noAccount')}{' '}
               <Link
                 to="/register"
                 className="font-medium text-blue-600 hover:text-blue-500 transition-colors"
               >
-                회원가입
+                {t('auth.signUp')}
               </Link>
             </p>
           </div>
@@ -380,7 +360,7 @@ const LoginPage = () => {
 
         {/* 추가 정보 */}
         <div className="mt-6 text-center text-white/80 text-sm">
-          <p>© 2024 MES Thailand. 모든 권리 보유.</p>
+          <p>{t('auth.copyright')}</p>
         </div>
       </div>
     </div>

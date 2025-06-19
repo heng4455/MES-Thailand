@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import logo from '../assets/logo.png';
 import { authHelpers } from '../utils/supabase';
+import LanguageSelector from '../components/LanguageSelector';
 
 const RegisterPage = () => {
   const { t } = useTranslation();
@@ -28,7 +29,7 @@ const RegisterPage = () => {
 
   // 부서 옵션들
   const departments = [
-    { value: 'production', label: '생산부' },
+    { value: 'production', label: t('auth.department') },
     { value: 'quality', label: '품질관리부' },
     { value: 'maintenance', label: '설비보전부' },
     { value: 'planning', label: '생산계획부' },
@@ -66,12 +67,12 @@ const RegisterPage = () => {
         toast.success(t('auth.registerSuccess'));
         console.log('✅ 회원가입 성공! 이메일 인증 메일이 발송되었습니다.');
       } else {
-        toast.error(result.error || '회원가입 중 오류가 발생했습니다.');
+        toast.error(result.error || t('auth.registerError'));
       }
       
     } catch (error) {
       console.error('Register error:', error);
-      toast.error('회원가입 중 오류가 발생했습니다.');
+      toast.error(t('auth.registerError'));
     } finally {
       setIsLoading(false);
     }
@@ -83,13 +84,13 @@ const RegisterPage = () => {
       const result = await authHelpers.resendVerification(formData.email);
       
       if (result.success) {
-        toast.success('인증 이메일을 다시 발송했습니다.');
+        toast.success(t('auth.passwordResetSent'));
       } else {
-        toast.error(result.error || '이메일 재전송에 실패했습니다.');
+        toast.error(result.error || t('auth.passwordResetError'));
       }
     } catch (error) {
       console.error('Resend email error:', error);
-      toast.error('이메일 재전송 중 오류가 발생했습니다.');
+      toast.error(t('auth.passwordResetError'));
     }
   };
 
@@ -100,14 +101,19 @@ const RegisterPage = () => {
   // 이메일 인증 안내 화면
   if (step === 2) {
     return (
-      <div className="min-h-screen flex items-center justify-center py-12">
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center py-12 px-4">
+        {/* 언어 선택기 */}
+        <div className="absolute top-6 right-6">
+          <LanguageSelector />
+        </div>
+
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5 }}
           className="max-w-md w-full space-y-8"
         >
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-8 text-center">
+          <div className="bg-white/90 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-8 text-center">
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
@@ -125,28 +131,26 @@ const RegisterPage = () => {
               transition={{ delay: 0.4, duration: 0.5 }}
               className="space-y-4"
             >
-              <h2 className="text-2xl font-bold text-white">
-                이메일 인증이 필요합니다
+              <h2 className="text-2xl font-bold text-gray-900">
+                {t('auth.awaitingApproval')}
               </h2>
-              <p className="text-white/80 leading-relaxed">
-                회원가입이 완료되었습니다!<br/>
-                <strong>입력하신 이메일로 인증 링크를 발송했습니다.</strong><br/>
-                이메일을 확인하고 인증 링크를 클릭해주세요.
+              <p className="text-gray-700 leading-relaxed">
+                {t('auth.awaitingApprovalDesc')}
               </p>
-              <div className="bg-white/10 rounded-lg p-4 mt-4">
-                <p className="text-white/90 text-sm">
-                  📧 <strong>계정 활성화 절차:</strong><br/>
-                  1. 이메일 받은편지함을 확인하세요<br/>
-                  2. "Confirm your signup" 링크를 클릭하세요<br/>
+              <div className="bg-blue-50 rounded-lg p-4 mt-4">
+                <p className="text-blue-800 text-sm">
+                  📧 <strong>{t('auth.emailVerificationNotice')}</strong><br/>
+                  1. {t('auth.emailVerificationRequired')}<br/>
+                  2. Confirm your signup 링크를 클릭하세요<br/>
                   3. 이메일 인증이 완료됩니다<br/>
-                  4. <strong>관리자 승인을 기다려주세요</strong><br/>
+                  4. <strong>{t('auth.awaitingApprovalMessage')}</strong><br/>
                   5. 승인 완료 후 로그인 가능합니다
                 </p>
               </div>
-              <div className="bg-yellow-500/20 border border-yellow-500/30 rounded-lg p-4 mt-4">
-                <p className="text-yellow-200 text-sm">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
+                <p className="text-yellow-800 text-sm">
                   ⚠️ <strong>중요 안내:</strong><br/>
-                  이메일 인증 후에도 <strong>관리자 승인</strong>이 필요합니다.<br/>
+                  이메일 인증 후에도 <strong>{t('auth.awaitingApprovalMessage')}</strong>이 필요합니다.<br/>
                   승인이 완료되면 로그인할 수 있습니다.
                 </p>
               </div>
@@ -160,7 +164,7 @@ const RegisterPage = () => {
             >
               <button
                 onClick={handleResendEmail}
-                className="w-full py-3 px-4 border border-white/20 rounded-lg text-white bg-white/10 hover:bg-white/20 transition-all duration-200"
+                className="w-full py-3 px-4 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-all duration-200"
               >
                 인증 이메일 재발송
               </button>
@@ -169,7 +173,7 @@ const RegisterPage = () => {
                 onClick={handleGoToLogin}
                 className="w-full py-3 px-4 rounded-lg text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 transition-all duration-200"
               >
-                로그인 페이지로 이동
+                {t('auth.backToLogin')}
               </button>
             </motion.div>
           </div>
@@ -180,7 +184,12 @@ const RegisterPage = () => {
 
   // 회원가입 폼 화면
   return (
-    <div className="min-h-screen flex items-center justify-center py-12">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center py-12 px-4">
+      {/* 언어 선택기 */}
+      <div className="absolute top-6 right-6">
+        <LanguageSelector />
+      </div>
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -188,7 +197,7 @@ const RegisterPage = () => {
         className="max-w-2xl w-full space-y-8"
       >
         {/* 회원가입 카드 */}
-        <div className="bg-white/10 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-8">
+        <div className="bg-white/90 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-8">
           {/* 헤더 */}
           <div className="text-center space-y-4 mb-8">
             <motion.div
@@ -203,15 +212,15 @@ const RegisterPage = () => {
             </motion.div>
             
             <motion.div
-              initial={{ y: 10, opacity: 0 }}
+              initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.3, duration: 0.5 }}
+              transition={{ delay: 0.4, duration: 0.5 }}
             >
-              <h2 className="text-3xl font-bold text-white">
+              <h2 className="text-3xl font-bold text-gray-900">
                 {t('auth.register')}
               </h2>
-              <p className="text-white/70 mt-2">
-                MES Thailand 계정을 생성하세요
+              <p className="text-gray-600 mt-2">
+                {t('auth.registerSubtitle')}
               </p>
             </motion.div>
           </div>
@@ -220,369 +229,224 @@ const RegisterPage = () => {
           <motion.form
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.4, duration: 0.5 }}
-            onSubmit={handleSubmit(handleRegister)}
+            transition={{ delay: 0.6, duration: 0.5 }}
+            onSubmit={handleSubmit(handleRegister)} 
             className="space-y-6"
           >
-            {/* 개인정보 섹션 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* 이름 */}
+            {/* 이름 & 성 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-white/90 mb-2">
-                  {t('auth.firstName')}
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {t('auth.firstName')} *
                 </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <span className="text-white/50">👤</span>
-                  </div>
-                  <input
-                    type="text"
-                    {...register('firstName', {
-                      required: '이름을 입력해주세요',
-                      minLength: {
-                        value: 2,
-                        message: '이름은 최소 2자 이상이어야 합니다'
-                      }
-                    })}
-                    className="block w-full pl-10 pr-3 py-3 border border-white/20 rounded-lg bg-white/10 backdrop-blur-sm text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
-                    placeholder="홍길동"
-                  />
-                </div>
+                <input
+                  type="text"
+                  {...register('firstName', {
+                    required: t('auth.firstNameRequired')
+                  })}
+                  className="block w-full px-3 py-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  placeholder={t('auth.firstNamePlaceholder')}
+                />
                 {errors.firstName && (
-                  <motion.p
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mt-2 text-sm text-red-400 flex items-center"
-                  >
-                    <span className="mr-1">⚠️</span>
+                  <p className="mt-2 text-sm text-red-600">
                     {errors.firstName.message}
-                  </motion.p>
+                  </p>
                 )}
               </div>
-
-              {/* 성 */}
+              
               <div>
-                <label className="block text-sm font-medium text-white/90 mb-2">
-                  {t('auth.lastName')}
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {t('auth.lastName')} *
                 </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <span className="text-white/50">👤</span>
-                  </div>
-                  <input
-                    type="text"
-                    {...register('lastName', {
-                      required: '성을 입력해주세요',
-                      minLength: {
-                        value: 1,
-                        message: '성은 최소 1자 이상이어야 합니다'
-                      }
-                    })}
-                    className="block w-full pl-10 pr-3 py-3 border border-white/20 rounded-lg bg-white/10 backdrop-blur-sm text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
-                    placeholder="김"
-                  />
-                </div>
+                <input
+                  type="text"
+                  {...register('lastName', {
+                    required: t('auth.lastNameRequired')
+                  })}
+                  className="block w-full px-3 py-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  placeholder={t('auth.lastNamePlaceholder')}
+                />
                 {errors.lastName && (
-                  <motion.p
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mt-2 text-sm text-red-400 flex items-center"
-                  >
-                    <span className="mr-1">⚠️</span>
+                  <p className="mt-2 text-sm text-red-600">
                     {errors.lastName.message}
-                  </motion.p>
+                  </p>
                 )}
               </div>
             </div>
 
             {/* 이메일 */}
             <div>
-              <label className="block text-sm font-medium text-white/90 mb-2">
-                {t('auth.email')}
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {t('auth.email')} *
               </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <span className="text-white/50">📧</span>
-                </div>
-                <input
-                  type="email"
-                  {...register('email', {
-                    required: '이메일을 입력해주세요',
-                    pattern: {
-                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                      message: '올바른 이메일 형식을 입력해주세요'
-                    }
-                  })}
-                  className="block w-full pl-10 pr-3 py-3 border border-white/20 rounded-lg bg-white/10 backdrop-blur-sm text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
-                  placeholder="example@company.com"
-                />
-              </div>
+              <input
+                type="email"
+                {...register('email', {
+                  required: t('auth.emailRequired'),
+                  pattern: {
+                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                    message: t('auth.emailInvalid')
+                  }
+                })}
+                className="block w-full px-3 py-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                placeholder={t('auth.emailPlaceholder')}
+              />
               {errors.email && (
-                <motion.p
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mt-2 text-sm text-red-400 flex items-center"
-                >
-                  <span className="mr-1">⚠️</span>
+                <p className="mt-2 text-sm text-red-600">
                   {errors.email.message}
-                </motion.p>
+                </p>
               )}
+            </div>
+
+            {/* 비밀번호 & 비밀번호 확인 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {t('auth.password')} *
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    {...register('password', {
+                      required: t('auth.passwordRequired'),
+                      minLength: {
+                        value: 6,
+                        message: t('auth.passwordMinLength')
+                      }
+                    })}
+                    className="block w-full px-3 py-3 pr-12 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    placeholder={t('auth.passwordPlaceholder')}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? '👁️' : '👁️‍🗨️'}
+                  </button>
+                </div>
+                {errors.password && (
+                  <p className="mt-2 text-sm text-red-600">
+                    {errors.password.message}
+                  </p>
+                )}
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {t('auth.confirmPassword')} *
+                </label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    {...register('confirmPassword', {
+                      required: t('auth.passwordRequired'),
+                      validate: value => value === password || t('auth.passwordMismatch')
+                    })}
+                    className="block w-full px-3 py-3 pr-12 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    placeholder={t('auth.passwordPlaceholder')}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                  >
+                    {showConfirmPassword ? '👁️' : '👁️‍🗨️'}
+                  </button>
+                </div>
+                {errors.confirmPassword && (
+                  <p className="mt-2 text-sm text-red-600">
+                    {errors.confirmPassword.message}
+                  </p>
+                )}
+              </div>
             </div>
 
             {/* 전화번호 */}
             <div>
-              <label className="block text-sm font-medium text-white/90 mb-2">
-                전화번호
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {t('auth.phone')}
               </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <span className="text-white/50">📞</span>
-                </div>
-                <input
-                  type="tel"
-                  {...register('phone', {
-                    required: '전화번호를 입력해주세요',
-                    pattern: {
-                      value: /^[0-9-+() ]+$/,
-                      message: '올바른 전화번호 형식을 입력해주세요'
-                    }
-                  })}
-                  className="block w-full pl-10 pr-3 py-3 border border-white/20 rounded-lg bg-white/10 backdrop-blur-sm text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
-                  placeholder="010-1234-5678"
-                />
-              </div>
-              {errors.phone && (
-                <motion.p
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mt-2 text-sm text-red-400 flex items-center"
-                >
-                  <span className="mr-1">⚠️</span>
-                  {errors.phone.message}
-                </motion.p>
-              )}
+              <input
+                type="tel"
+                {...register('phone')}
+                className="block w-full px-3 py-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                placeholder={t('auth.phonePlaceholder')}
+              />
             </div>
 
-            {/* 직장 정보 섹션 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* 부서 */}
+            {/* 부서 & 직책 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-white/90 mb-2">
-                  부서
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {t('auth.department')}
                 </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <span className="text-white/50">🏢</span>
-                  </div>
-                  <select
-                    {...register('department', {
-                      required: '부서를 선택해주세요'
-                    })}
-                    className="block w-full pl-10 pr-3 py-3 border border-white/20 rounded-lg bg-white/10 backdrop-blur-sm text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
-                  >
-                    <option value="" className="text-gray-900">부서를 선택하세요</option>
-                    {departments.map((dept) => (
-                      <option key={dept.value} value={dept.value} className="text-gray-900">
-                        {dept.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                {errors.department && (
-                  <motion.p
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mt-2 text-sm text-red-400 flex items-center"
-                  >
-                    <span className="mr-1">⚠️</span>
-                    {errors.department.message}
-                  </motion.p>
-                )}
+                <select
+                  {...register('department')}
+                  className="block w-full px-3 py-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                >
+                  <option value="">{t('auth.departmentPlaceholder')}</option>
+                  {departments.map((dept) => (
+                    <option key={dept.value} value={dept.value}>
+                      {dept.label}
+                    </option>
+                  ))}
+                </select>
               </div>
-
-              {/* 직책 */}
+              
               <div>
-                <label className="block text-sm font-medium text-white/90 mb-2">
-                  직책
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {t('auth.position')}
                 </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <span className="text-white/50">💼</span>
-                  </div>
-                  <select
-                    {...register('position', {
-                      required: '직책을 선택해주세요'
-                    })}
-                    className="block w-full pl-10 pr-3 py-3 border border-white/20 rounded-lg bg-white/10 backdrop-blur-sm text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
-                  >
-                    <option value="" className="text-gray-900">직책을 선택하세요</option>
-                    {positions.map((pos) => (
-                      <option key={pos.value} value={pos.value} className="text-gray-900">
-                        {pos.label}
-                      </option>
-                    ))}
-                  </select>
+                <select
+                  {...register('position')}
+                  className="block w-full px-3 py-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                >
+                  <option value="">{t('auth.positionPlaceholder')}</option>
+                  {positions.map((pos) => (
+                    <option key={pos.value} value={pos.value}>
+                      {pos.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* 회원가입 버튼 */}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-lg text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+            >
+              {isLoading ? (
+                <div className="flex items-center">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                  {t('auth.registering')}
                 </div>
-                {errors.position && (
-                  <motion.p
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mt-2 text-sm text-red-400 flex items-center"
-                  >
-                    <span className="mr-1">⚠️</span>
-                    {errors.position.message}
-                  </motion.p>
-                )}
-              </div>
-            </div>
-
-            {/* 비밀번호 */}
-            <div>
-              <label className="block text-sm font-medium text-white/90 mb-2">
-                {t('auth.password')}
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <span className="text-white/50">🔒</span>
-                </div>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  {...register('password', {
-                    required: '비밀번호를 입력해주세요',
-                    minLength: {
-                      value: 8,
-                      message: '비밀번호는 최소 8자 이상이어야 합니다'
-                    },
-                    pattern: {
-                      value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
-                      message: '비밀번호는 대문자, 소문자, 숫자, 특수문자를 포함해야 합니다'
-                    }
-                  })}
-                  className="block w-full pl-10 pr-12 py-3 border border-white/20 rounded-lg bg-white/10 backdrop-blur-sm text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
-                  placeholder="••••••••"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-white/50 hover:text-white/80 transition-colors"
-                >
-                  <span>{showPassword ? '🙈' : '👁️'}</span>
-                </button>
-              </div>
-              {errors.password && (
-                <motion.p
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mt-2 text-sm text-red-400 flex items-center"
-                >
-                  <span className="mr-1">⚠️</span>
-                  {errors.password.message}
-                </motion.p>
+              ) : (
+                t('auth.signUp')
               )}
-            </div>
+            </button>
 
-            {/* 비밀번호 확인 */}
-            <div>
-              <label className="block text-sm font-medium text-white/90 mb-2">
-                비밀번호 확인
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <span className="text-white/50">🔒</span>
-                </div>
-                <input
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  {...register('confirmPassword', {
-                    required: '비밀번호 확인을 입력해주세요',
-                    validate: value => value === password || '비밀번호가 일치하지 않습니다'
-                  })}
-                  className="block w-full pl-10 pr-12 py-3 border border-white/20 rounded-lg bg-white/10 backdrop-blur-sm text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
-                  placeholder="••••••••"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-white/50 hover:text-white/80 transition-colors"
-                >
-                  <span>{showConfirmPassword ? '🙈' : '👁️'}</span>
-                </button>
-              </div>
-              {errors.confirmPassword && (
-                <motion.p
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mt-2 text-sm text-red-400 flex items-center"
-                >
-                  <span className="mr-1">⚠️</span>
-                  {errors.confirmPassword.message}
-                </motion.p>
-              )}
-            </div>
-
-            {/* 이용약관 동의 */}
-            <div className="space-y-3">
-              <div className="flex items-start">
-                <input
-                  type="checkbox"
-                  {...register('agreeTerms', {
-                    required: '이용약관에 동의해주세요'
-                  })}
-                  className="h-4 w-4 text-green-600 focus:ring-green-500 border-white/20 rounded bg-white/10 mt-1"
-                />
-                <label className="ml-2 text-sm text-white/80">
-                  <span className="text-red-400">*</span> 이용약관 및 개인정보 처리방침에 동의합니다.
-                </label>
-              </div>
-              {errors.agreeTerms && (
-                <motion.p
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="text-sm text-red-400 flex items-center"
-                >
-                  <span className="mr-1">⚠️</span>
-                  {errors.agreeTerms.message}
-                </motion.p>
-              )}
-            </div>
-
-            {/* 제출 버튼 */}
-            <div className="space-y-4">
-              <motion.button
-                type="submit"
-                disabled={isLoading}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className={`w-full py-3 px-4 rounded-lg text-white font-medium transition-all duration-200 ${
-                  isLoading
-                    ? 'bg-gray-500 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 shadow-lg hover:shadow-xl'
-                }`}
-              >
-                {isLoading ? (
-                  <div className="flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></div>
-                    계정 생성 중...
-                  </div>
-                ) : (
-                  t('auth.register')
-                )}
-              </motion.button>
-
-              {/* 로그인 링크 */}
-              <div className="text-center">
-                <span className="text-white/70 text-sm">
-                  이미 계정이 있으신가요?{' '}
-                </span>
+            {/* 로그인 링크 */}
+            <div className="text-center">
+              <p className="text-gray-600">
+                {t('auth.alreadyHaveAccount')}{' '}
                 <button
                   type="button"
                   onClick={() => navigate('/login')}
-                  className="text-green-300 hover:text-green-200 text-sm font-medium transition-colors"
+                  className="font-medium text-blue-600 hover:text-blue-500 transition-colors"
                 >
-                  로그인하기
+                  {t('auth.signIn')}
                 </button>
-              </div>
+              </p>
             </div>
           </motion.form>
+        </div>
+
+        {/* 추가 정보 */}
+        <div className="text-center text-white/80 text-sm">
+          <p>{t('auth.copyright')}</p>
         </div>
       </motion.div>
     </div>

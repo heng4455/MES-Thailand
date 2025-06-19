@@ -1,6 +1,8 @@
 const { Pool } = require('pg');
+const { createClient } = require('@supabase/supabase-js');
 require('dotenv').config();
 
+// PostgreSQL 연결 설정
 const pool = new Pool({
   host: process.env.DB_HOST || 'localhost',
   port: process.env.DB_PORT || 5432,
@@ -11,6 +13,17 @@ const pool = new Pool({
   max: 20, // 최대 연결 수
   idleTimeoutMillis: 30000, // 유휴 시간 초과
   connectionTimeoutMillis: 2000, // 연결 시간 초과
+});
+
+// Supabase 클라이언트 설정
+const supabaseUrl = 'https://rrkumbyeyhxdsblqxrmn.supabase.co';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJya3VtYnlleWh4ZHNibHF4cm1uIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MDA2Nzg1MiwiZXhwIjoyMDY1NjQzODUyfQ.E4xvPIAHF_OOlgI4vgU4BdtYSKcaSTBz55QfbI5nYNs';
+
+const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false
+  }
 });
 
 // 데이터베이스 연결 테스트
@@ -78,5 +91,6 @@ const getClient = async () => {
 module.exports = {
   pool,
   query,
-  getClient
+  getClient,
+  supabase
 }; 

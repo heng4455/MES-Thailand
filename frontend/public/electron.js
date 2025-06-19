@@ -1,10 +1,45 @@
 const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron');
 const path = require('path');
+const os = require('os');
+const fs = require('fs');
 const isDev = process.env.NODE_ENV === 'development';
 
 // 보안 경고 억제 (개발 환경에서만)
 if (isDev) {
   process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
+}
+
+// 캐시 및 사용자 데이터 디렉토리 설정
+const userDataPath = path.join(os.homedir(), '.mes-thailand');
+const cachePath = path.join(userDataPath, 'cache');
+
+// 디렉토리 생성 (존재하지 않는 경우)
+try {
+  if (!fs.existsSync(userDataPath)) {
+    fs.mkdirSync(userDataPath, { recursive: true });
+  }
+  if (!fs.existsSync(cachePath)) {
+    fs.mkdirSync(cachePath, { recursive: true });
+  }
+} catch (error) {
+  console.log('디렉토리 생성 오류 (무시됨):', error.message);
+}
+
+// Electron 앱 경로 설정
+app.setPath('userData', userDataPath);
+app.setPath('cache', cachePath);
+
+// GPU 가속 및 캐시 관련 명령줄 인수 추가
+app.commandLine.appendSwitch('--disable-gpu-sandbox');
+app.commandLine.appendSwitch('--no-sandbox');
+app.commandLine.appendSwitch('--disable-dev-shm-usage');
+app.commandLine.appendSwitch('--disable-gpu-process-crash-limit');
+app.commandLine.appendSwitch('--disable-features', 'VizDisplayCompositor');
+
+// 개발 환경에서 추가 플래그
+if (isDev) {
+  app.commandLine.appendSwitch('--disable-web-security');
+  app.commandLine.appendSwitch('--disable-features', 'OutOfBlinkCors');
 }
 
 // 메인 윈도우 레퍼런스
@@ -26,12 +61,29 @@ function createWindow() {
       allowRunningInsecureContent: isDev, // 개발 환경에서만 허용
       experimentalFeatures: false,
       sandbox: false, // React 개발 도구를 위해 샌드박스 비활성화
-      preload: path.join(__dirname, 'preload.js')
+      preload: path.join(__dirname, 'preload.js'),
+      // 캐시 관련 설정
+      partition: 'persist:main',
+      // 추가 보안 설정
+      spellcheck: false,
+      devTools: isDev
     },
     show: false, // 초기 로딩 시 숨김
     titleBarStyle: 'default', // 타이틀바 스타일
     backgroundColor: '#1a1a1a' // 어두운 배경색
   });
+
+  // 세션 설정
+  const session = mainWindow.webContents.session;
+  
+  // 캐시 크기 제한 설정 (Electron 버전에 따라 지원되지 않을 수 있음)
+  try {
+    if (typeof session.setCacheSize === 'function') {
+      session.setCacheSize(100 * 1024 * 1024); // 100MB
+    }
+  } catch (error) {
+    console.log('캐시 크기 설정을 건너뜁니다:', error.message);
+  }
 
   // CSP 헤더 설정은 프로덕션에서만 적용
   // 개발 환경에서는 HTML의 간단한 CSP만 사용
@@ -39,7 +91,7 @@ function createWindow() {
   // 애플리케이션 로드
   const startUrl = isDev 
     ? 'http://localhost:3000' 
-    : `file://${path.join(__dirname, './index.html')}`;
+    : `file://${path.join(__dirname, '../build/index.html')}`;
   
   mainWindow.loadURL(startUrl);
 
@@ -94,12 +146,17 @@ function createWindow() {
     require('electron').shell.openExternal(url);
   });
 
-  // 개발 환경에서 에러 디버깅
-  if (isDev) {
-    mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
-      console.log('Failed to load:', errorDescription, validatedURL);
-    });
+  // 오류 처리 개선
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+    console.log('페이지 로드 실패:', errorDescription, validatedURL);
+  });
 
+  mainWindow.webContents.on('crashed', (event, killed) => {
+    console.log('렌더러 프로세스 충돌:', killed);
+  });
+
+  // 개발 환경에서 콘솔 메시지
+  if (isDev) {
     mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
       console.log(`Console [${level}]:`, message);
     });

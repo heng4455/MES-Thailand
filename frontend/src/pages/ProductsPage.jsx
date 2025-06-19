@@ -22,6 +22,7 @@ import * as XLSX from 'xlsx';
 import Modal from '../components/Modal';
 import ConfirmDialog from '../components/ConfirmDialog';
 import Toast from '../components/Toast';
+import { productsAPI, customersAPI, supabase } from '../utils/supabase';
 
 const ProductsPage = () => {
   const { t } = useTranslation();
@@ -38,6 +39,7 @@ const ProductsPage = () => {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState('success');
+  const [highlightedProductCode, setHighlightedProductCode] = useState(null);
   const fileInputRef = useRef(null);
   const [formData, setFormData] = useState({
     productCode: '',
@@ -48,161 +50,116 @@ const ProductsPage = () => {
     orderStatus: 'pending'
   });
 
-  // 고객 데이터 가져오기
+  // 실제 고객 데이터 로드
   const loadCustomers = async () => {
-    // 실제 구현에서는 API에서 데이터를 가져옴
-    const mockCustomers = [
-      {
-        id: 1,
-        customerName: 'MOBIS',
-        companyName: '현대모비스',
-        status: 'active'
-      },
-      {
-        id: 2,
-        customerName: 'LG VS',
-        companyName: 'LG전자 VS사업부',
-        status: 'active'
-      },
-      {
-        id: 3,
-        customerName: 'HL Clemove',
-        companyName: 'HL클레무브',
-        status: 'active'
-      },
-      {
-        id: 4,
-        customerName: 'Samsung SDI',
-        companyName: '삼성SDI',
-        status: 'active'
-      },
-      {
-        id: 5,
-        customerName: 'SK Innovation',
-        companyName: 'SK이노베이션',
-        status: 'active'
+    try {
+      const result = await customersAPI.getAll();
+      if (result.success) {
+        const formattedCustomers = result.data.map(customer => ({
+          id: customer.id,
+          customerName: customer.customer_name,
+          companyName: customer.company_name,
+          status: customer.status
+        }));
+        setCustomers(formattedCustomers);
+      } else {
+        console.error('Customer data load failed:', result.error);
+        setCustomers([]);
       }
-    ];
-
-    setCustomers(mockCustomers);
+    } catch (error) {
+      console.error('Customer data load error:', error);
+      setCustomers([]);
+    }
   };
 
-  // 샘플 제품 데이터 (스크린샷 기반)
+  // 실제 제품 데이터 로드
   useEffect(() => {
-    const loadData = async () => {
-      // 고객 데이터 로드
-      await loadCustomers();
-
-      const mockProducts = [
-        {
-          id: 1,
-          productCode: 'CMI-CDSS4018NH-4R7M',
-          productName: 'Power Inductor 4.7μH',
-          client: 'MOBIS',
-          quantity: 6,
-          unit: '개',
-          orderStatus: 'inProcess',
-          registrationDate: '2025-06-16',
-          orderProgress: 75
-        },
-        {
-          id: 2,
-          productCode: 'CMI-CDSS4018NH-6R8M',
-          productName: 'Power Inductor 6.8μH',
-          client: 'MOBIS',
-          quantity: 6,
-          unit: '개',
-          orderStatus: 'inProcess',
-          registrationDate: '2025-06-16',
-          orderProgress: 85
-        },
-        {
-          id: 3,
-          productCode: 'CMI-CMPP6030HL-6R8M-N',
-          productName: 'Coupled Inductor 6.8μH',
-          client: 'MOBIS',
-          quantity: 7,
-          unit: '개',
-          orderStatus: 'inProcess',
-          registrationDate: '2025-06-16',
-          orderProgress: 60
-        },
-        {
-          id: 4,
-          productCode: 'CMI-CSSP12080NF-221M',
-          productName: 'Shield Power Inductor 220μH',
-          client: 'MOBIS',
-          quantity: 6,
-          unit: '개',
-          orderStatus: 'inProcess',
-          registrationDate: '2025-06-16',
-          orderProgress: 90
-        },
-        {
-          id: 5,
-          productCode: 'CME-CSCF3225B-100T30-A',
-          productName: 'Common Mode Choke 100μH',
-          client: 'HL Clemove',
-          quantity: 4,
-          unit: '개',
-          orderStatus: 'inProcess',
-          registrationDate: '2025-06-12',
-          orderProgress: 45
-        },
-        {
-          id: 6,
-          productCode: 'CMI-CMPP4020HL-1ROM',
-          productName: 'Coupled Inductor 1.0μH',
-          client: 'LG VS',
-          quantity: 6,
-          unit: '개',
-          orderStatus: 'inProcess',
-          registrationDate: '2025-06-12',
-          orderProgress: 70
-        },
-        {
-          id: 7,
-          productCode: 'CMI-CMPP5030HL-1ROM',
-          productName: 'Coupled Inductor 1.0μH',
-          client: 'LG VS',
-          quantity: 6,
-          unit: '개',
-          orderStatus: 'inProcess',
-          registrationDate: '2025-06-12',
-          orderProgress: 80
-        },
-        {
-          id: 8,
-          productCode: 'CMI-CMPP5030HL-220M',
-          productName: 'Coupled Inductor 22μH',
-          client: 'LG VS',
-          quantity: 6,
-          unit: '개',
-          orderStatus: 'inProcess',
-          registrationDate: '2025-06-12',
-          orderProgress: 55
-        },
-        {
-          id: 9,
-          productCode: 'CMI-CDSS5040NH-220M',
-          productName: 'Power Inductor 22μH',
-          client: 'LG VS',
-          quantity: 5,
-          unit: '개',
-          orderStatus: 'inProcess',
-          registrationDate: '2025-06-12',
-          orderProgress: 65
-        }
-      ];
-
-      setTimeout(() => {
-        setProducts(mockProducts);
-        setIsLoading(false);
-      }, 1000);
-    };
-
     loadData();
+    
+    // 공정 관리에서 이동해온 경우 해당 제품 하이라이트
+    const highlightProduct = localStorage.getItem('highlightProduct');
+    if (highlightProduct) {
+      setHighlightedProductCode(highlightProduct);
+      setSearchTerm(highlightProduct); // 검색어도 설정하여 해당 제품이 바로 보이도록
+      
+      // 토스트 메시지 표시
+      setTimeout(() => {
+        showToastMessage(`공정 관리에서 연결된 제품: ${highlightProduct}`, 'info');
+      }, 500);
+      
+      // 하이라이트 제거 (일회성)
+      setTimeout(() => {
+        setHighlightedProductCode(null);
+        localStorage.removeItem('highlightProduct');
+      }, 5000); // 5초 후 하이라이트 제거
+    }
   }, []);
+
+  const loadData = async () => {
+    try {
+      setIsLoading(true);
+      
+      // 고객 데이터와 제품 데이터를 병렬로 로드
+      await Promise.all([
+        loadCustomers(),
+        loadProducts()
+      ]);
+    } catch (error) {
+      console.error('Data load error:', error);
+      showToastMessage(t('common.dataLoadError'), 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadProducts = async () => {
+    try {
+      const result = await productsAPI.getAll();
+      
+      if (result.success) {
+        // Supabase 데이터를 UI 형식으로 변환하고 연결된 공정 정보도 가져오기
+        const formattedProducts = await Promise.all(result.data.map(async (product) => {
+          // 해당 제품과 연결된 공정들 가져오기
+          let connectedProcesses = [];
+          try {
+            const { data: processData } = await supabase
+              .from('work_centers')
+              .select('name, code')
+              .ilike('description', `%${product.product_code}%`);
+            
+            if (processData && processData.length > 0) {
+              connectedProcesses = processData.map(p => p.name || p.code).filter(Boolean);
+            }
+          } catch (error) {
+            console.warn('공정 연결 정보 조회 실패:', error);
+          }
+
+          return {
+            id: product.id,
+            productCode: product.product_code,
+            productName: product.product_name,
+            client: product.client,
+            quantity: product.quantity,
+            unit: product.unit,
+            orderStatus: product.order_status,
+            registrationDate: product.registration_date,
+            orderProgress: product.order_progress || 0,
+            description: product.description,
+            connectedProcesses: connectedProcesses // 연결된 공정 목록 추가
+          };
+        }));
+        
+        setProducts(formattedProducts);
+      } else {
+        console.error('Product data load failed:', result.error);
+        setProducts([]);
+      }
+    } catch (error) {
+      console.error('Product data load error:', error);
+      showToastMessage(t('products.loadFailed'), 'error');
+      setProducts([]);
+    }
+  };
 
   // 필터링된 제품 목록
   const filteredProducts = products.filter(product => {
@@ -271,34 +228,84 @@ const ProductsPage = () => {
     setShowDeleteDialog(true);
   };
 
-  const confirmDelete = () => {
-    setProducts(products.filter(p => p.id !== selectedProduct.id));
-    setShowDeleteDialog(false);
-    setSelectedProduct(null);
+  const confirmDelete = async () => {
+    try {
+      const result = await productsAPI.delete(selectedProduct.id);
+      if (result.success) {
+        setProducts(products.filter(p => p.id !== selectedProduct.id));
+        showToastMessage(t('products.productDeletedSuccess'), 'success');
+      } else {
+        showToastMessage(`${t('common.deleteFailed')}: ${result.error}`, 'error');
+      }
+    } catch (error) {
+      console.error('Product delete error:', error);
+      showToastMessage(t('common.deleteError'), 'error');
+    } finally {
+      setShowDeleteDialog(false);
+      setSelectedProduct(null);
+    }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    try {
+      const productData = {
+        ...formData,
+        quantity: parseInt(formData.quantity) || 0
+      };
+
     if (selectedProduct) {
       // 수정
+        const result = await productsAPI.update(selectedProduct.id, productData);
+        if (result.success) {
+          // 로컬 state 업데이트
       setProducts(products.map(p => 
         p.id === selectedProduct.id 
-          ? { ...p, ...formData, quantity: parseInt(formData.quantity) }
+              ? { 
+                  ...p, 
+                  productCode: productData.productCode,
+                  productName: productData.productName,
+                  client: productData.client,
+                  quantity: productData.quantity,
+                  unit: productData.unit,
+                  orderStatus: productData.orderStatus
+                }
           : p
       ));
+          showToastMessage(t('modals.saveSuccess'), 'success');
       setShowEditModal(false);
+        } else {
+          showToastMessage(`${t('common.updateFailed')}: ${result.error}`, 'error');
+          return;
+        }
     } else {
       // 새 제품 추가
+        const result = await productsAPI.create(productData);
+        if (result.success) {
       const newProduct = {
-        id: Date.now(),
-        ...formData,
-        quantity: parseInt(formData.quantity),
-        registrationDate: new Date().toISOString().split('T')[0],
-        orderProgress: 0
+            id: result.data.id,
+            productCode: result.data.product_code,
+            productName: result.data.product_name,
+            client: result.data.client,
+            quantity: result.data.quantity,
+            unit: result.data.unit,
+            orderStatus: result.data.order_status,
+            registrationDate: result.data.registration_date,
+            orderProgress: result.data.order_progress || 0,
+            description: result.data.description
       };
       setProducts([...products, newProduct]);
+          showToastMessage(t('products.productAddedSuccess'), 'success');
       setShowAddModal(false);
+        } else {
+          showToastMessage(`${t('common.saveFailed')}: ${result.error}`, 'error');
+          return;
+        }
     }
     resetForm();
+    } catch (error) {
+      console.error('Product save error:', error);
+      showToastMessage(t('common.saveError'), 'error');
+    }
   };
 
   const resetForm = () => {
@@ -338,7 +345,7 @@ const ProductsPage = () => {
         '고객사': product.client,
         '수량': product.quantity,
         '단위': product.unit,
-        '주문상태': getOrderStatusText(product.orderStatus),
+        '이관상태': getStatusText(product.orderStatus),
         '등록일': product.registrationDate
       }));
 
@@ -353,7 +360,7 @@ const ProductsPage = () => {
         { wch: 15 }, // 고객사
         { wch: 10 }, // 수량
         { wch: 8 },  // 단위
-        { wch: 12 }, // 주문상태
+        { wch: 12 }, // 이관상태
         { wch: 15 }  // 등록일
       ];
       ws['!cols'] = colWidths;
@@ -361,10 +368,10 @@ const ProductsPage = () => {
       const fileName = `제품목록_${new Date().toISOString().split('T')[0]}.xlsx`;
       XLSX.writeFile(wb, fileName);
       
-      showToastMessage('제품 데이터가 성공적으로 내보내졌습니다.', 'success');
+      showToastMessage(t('products.productExported'), 'success');
     } catch (error) {
       console.error('Export error:', error);
-      showToastMessage('내보내기 중 오류가 발생했습니다.', 'error');
+      showToastMessage(t('products.fileReadError'), 'error');
     }
   };
 
@@ -373,12 +380,12 @@ const ProductsPage = () => {
     fileInputRef.current?.click();
   };
 
-  const handleFileUpload = (event) => {
+  const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const data = e.target.result;
         const workbook = XLSX.read(data, { type: 'binary' });
@@ -413,33 +420,76 @@ const ProductsPage = () => {
             return;
           }
 
+          // Supabase 저장용 데이터 구조로 변환
           const product = {
-            id: Date.now() + Math.random(),
-            productCode,
-            productName,
-            client,
+            product_code: productCode,
+            product_name: productName,
+            client: client,
             quantity: parsedQuantity,
-            unit,
-            orderStatus: ['pending', 'processing', 'completed', 'cancelled'].includes(orderStatus) ? orderStatus : 'pending',
-            registrationDate: new Date().toLocaleDateString('ko-KR')
+            unit: unit,
+            order_status: ['pending', 'inProcess', 'completed', 'shipped'].includes(orderStatus) ? orderStatus : 'pending',
+            registration_date: new Date().toISOString(),
+            order_progress: 0,
+            description: row['설명'] || row['description'] || ''
           };
 
           importedProducts.push(product);
         });
 
         if (importedProducts.length > 0) {
-          setProducts(prev => [...prev, ...importedProducts]);
-          showToastMessage(
-            `${importedProducts.length}개의 제품이 성공적으로 가져와졌습니다.${hasErrors ? ' (일부 오류 있음)' : ''}`,
-            hasErrors ? 'warning' : 'success'
-          );
+          // Supabase에 각 제품 저장하고 동시에 UI용 데이터 준비
+          let successCount = 0;
+          let errorCount = 0;
+          const newProducts = [];
+
+          for (const product of importedProducts) {
+            try {
+              const result = await productsAPI.create(product);
+              if (result.success) {
+                successCount++;
+                // 새로 생성된 제품을 UI 형식으로 변환하여 추가
+                const newProduct = {
+                  id: result.data.id,
+                  productCode: result.data.product_code,
+                  productName: result.data.product_name,
+                  client: result.data.client,
+                  quantity: result.data.quantity,
+                  unit: result.data.unit,
+                  orderStatus: result.data.order_status,
+                  registrationDate: result.data.registration_date,
+                  orderProgress: result.data.order_progress || 0,
+                  description: result.data.description
+                };
+                newProducts.push(newProduct);
+              } else {
+                console.error('제품 저장 실패:', result.error);
+                errorCount++;
+              }
+            } catch (error) {
+              console.error('제품 저장 오류:', error);
+              errorCount++;
+            }
+          }
+
+          // 성공적으로 저장된 제품들을 기존 목록에 추가
+          if (successCount > 0) {
+            setProducts(prev => [...newProducts, ...prev]);
+            
+            const message = errorCount > 0 
+              ? `${successCount}개 제품이 저장되었습니다. ${errorCount}개는 저장에 실패했습니다.`
+              : `${successCount}개의 제품이 성공적으로 가져와졌습니다.`;
+              
+            showToastMessage(message, errorCount > 0 ? 'warning' : 'success');
+          } else {
+            showToastMessage('제품 저장에 실패했습니다.', 'error');
+          }
         } else {
-          showToastMessage('가져올 수 있는 유효한 데이터가 없습니다.', 'error');
+          showToastMessage(t('products.fileReadError'), 'error');
         }
 
       } catch (error) {
         console.error('Import error:', error);
-        showToastMessage('파일을 읽는 중 오류가 발생했습니다.', 'error');
+        showToastMessage(t('products.fileReadError'), 'error');
       }
     };
 
@@ -606,7 +656,10 @@ const ProductsPage = () => {
                 {t('products.quantity')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                {t('products.orderStatus')}
+                이관상태
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                연결된 공정
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
   {t('products.registrationDate')}
@@ -622,12 +675,25 @@ const ProductsPage = () => {
                   key={product.id}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="hover:bg-gray-50 transition-colors"
+                  className={`hover:bg-gray-50 transition-colors ${
+                    highlightedProductCode === product.productCode 
+                      ? 'bg-yellow-100 border-l-4 border-yellow-500 shadow-md' 
+                      : ''
+                  }`}
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div>
-                      <div className="text-sm font-medium text-gray-900">
+                      <div className={`text-sm font-medium ${
+                        highlightedProductCode === product.productCode 
+                          ? 'text-yellow-900 font-bold' 
+                          : 'text-gray-900'
+                      }`}>
                         {product.productCode}
+                        {highlightedProductCode === product.productCode && (
+                          <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-200 text-yellow-800">
+                            공정 연결됨
+                          </span>
+                        )}
                       </div>
                       <div className="text-sm text-gray-500">
                         {product.productName}
@@ -648,6 +714,29 @@ const ProductsPage = () => {
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(product.orderStatus)}`}>
                       {getStatusText(product.orderStatus)}
                     </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">
+                      {product.connectedProcesses && product.connectedProcesses.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {product.connectedProcesses.slice(0, 2).map((process, index) => (
+                            <span 
+                              key={index}
+                              className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800"
+                            >
+                              {process}
+                            </span>
+                          ))}
+                          {product.connectedProcesses.length > 2 && (
+                            <span className="text-xs text-gray-500">
+                              +{product.connectedProcesses.length - 2}개
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-400">연결된 공정 없음</span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">

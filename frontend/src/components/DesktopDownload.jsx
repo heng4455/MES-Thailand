@@ -21,7 +21,10 @@ const DesktopDownload = () => {
 
   // 다운로드 링크 (실제 환경에서는 실제 빌드된 파일 링크로 교체)
   const downloadLinks = {
-    windows: '/downloads/MES-Thailand-Setup-1.0.0.exe',
+    windows: {
+      installer: '/downloads/MES-Thailand-Installer-1.0.0.exe', // NSIS 설치 프로그램
+      portable: '/downloads/MES-Thailand-Portable-1.0.0.exe'    // 포터블 버전
+    },
     mac: '/downloads/MES-Thailand-1.0.0.dmg',
     linux: '/downloads/MES-Thailand-1.0.0.AppImage'
   };
@@ -32,14 +35,21 @@ const DesktopDownload = () => {
     linux: 'Linux'
   };
 
-  const handleDownload = async (os) => {
+  const handleDownload = async (os, type = 'installer') => {
     setIsDownloading(true);
     
     try {
       // 실제 파일 다운로드
       const link = document.createElement('a');
-      link.href = downloadLinks[os];
-      link.download = `MES-Thailand-Setup-${os}.${os === 'windows' ? 'exe' : os === 'mac' ? 'dmg' : 'AppImage'}`;
+      
+      if (os === 'windows') {
+        link.href = downloadLinks[os][type];
+        link.download = `MES-Thailand-${type === 'installer' ? 'Installer' : 'Portable'}-1.0.0.exe`;
+      } else {
+        link.href = downloadLinks[os];
+        link.download = `MES-Thailand-Setup-${os}.${os === 'mac' ? 'dmg' : 'AppImage'}`;
+      }
+      
       link.target = '_blank'; // 새 탭에서 열기
       document.body.appendChild(link);
       link.click();
@@ -48,7 +58,11 @@ const DesktopDownload = () => {
       // 성공 메시지와 설치 안내
       setTimeout(() => {
         setIsDownloading(false);
-        alert(`다운로드가 시작되었습니다!\n\n설치 후 바탕화면에 "MES Thailand" 아이콘이 생성됩니다.\n\n데스크톱 앱의 장점:\n• 더 빠른 실행 속도\n• 오프라인 데이터 캐싱\n• 시스템 알림 지원\n• 멀티태스킹 환경 최적화`);
+        const message = type === 'portable' 
+          ? `포터블 버전 다운로드가 시작되었습니다!\n\n사용법:\n• 다운로드한 파일을 원하는 위치에 저장\n• 바로 실행하여 사용 (설치 불필요)\n• USB에 넣어서 이동 가능\n\n포터블 버전의 장점:\n• 설치 불필요\n• 시스템에 흔적 남지 않음\n• 이동식 저장장치에서 실행 가능`
+          : `설치 프로그램 다운로드가 시작되었습니다!\n\n설치 후 바탕화면에 "MES Thailand" 아이콘이 생성됩니다.\n\n데스크톱 앱의 장점:\n• 더 빠른 실행 속도\n• 오프라인 데이터 캐싱\n• 시스템 알림 지원\n• 멀티태스킹 환경 최적화`;
+        
+        alert(message);
         setShowModal(false);
       }, 1000);
       
@@ -135,38 +149,110 @@ const DesktopDownload = () => {
                 <h4 className="font-semibold text-gray-900">운영체제 선택</h4>
                 
                 {/* 현재 OS 추천 */}
-                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Monitor className="w-5 h-5 text-blue-600" />
-                      <div>
-                        <div className="font-medium text-blue-900">
-                          {osNames[currentOS]} (추천)
+                {currentOS === 'windows' ? (
+                  // Windows 전용 다운로드 옵션
+                  <div className="space-y-3">
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Monitor className="w-5 h-5 text-blue-600" />
+                          <div>
+                            <div className="font-medium text-blue-900">
+                              Windows 설치 프로그램 (추천)
+                            </div>
+                            <div className="text-sm text-blue-600">
+                              바탕화면 바로가기 생성, 자동 업데이트 지원
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-sm text-blue-600">
-                          현재 사용 중인 운영체제
-                        </div>
+                        <button
+                          onClick={() => handleDownload('windows', 'installer')}
+                          disabled={isDownloading}
+                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                        >
+                          {isDownloading ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                              다운로드 중...
+                            </>
+                          ) : (
+                            <>
+                              <Download className="w-4 h-4" />
+                              설치 프로그램 (107MB)
+                            </>
+                          )}
+                        </button>
                       </div>
                     </div>
-                    <button
-                      onClick={() => handleDownload(currentOS)}
-                      disabled={isDownloading}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-                    >
-                      {isDownloading ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                          다운로드 중...
-                        </>
-                      ) : (
-                        <>
-                          <Download className="w-4 h-4" />
-                          다운로드
-                        </>
-                      )}
-                    </button>
+                    
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Smartphone className="w-5 h-5 text-green-600" />
+                          <div>
+                            <div className="font-medium text-green-900">
+                              Windows 포터블 버전
+                            </div>
+                            <div className="text-sm text-green-600">
+                              설치 불필요, USB에서 실행 가능
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleDownload('windows', 'portable')}
+                          disabled={isDownloading}
+                          className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                        >
+                          {isDownloading ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                              다운로드 중...
+                            </>
+                          ) : (
+                            <>
+                              <Download className="w-4 h-4" />
+                              포터블 버전 (448MB)
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  // 다른 OS의 기존 방식
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Monitor className="w-5 h-5 text-blue-600" />
+                        <div>
+                          <div className="font-medium text-blue-900">
+                            {osNames[currentOS]} (추천)
+                          </div>
+                          <div className="text-sm text-blue-600">
+                            현재 사용 중인 운영체제
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleDownload(currentOS)}
+                        disabled={isDownloading}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                      >
+                        {isDownloading ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                            다운로드 중...
+                          </>
+                        ) : (
+                          <>
+                            <Download className="w-4 h-4" />
+                            다운로드
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* 다른 OS 옵션 */}
                 <div className="space-y-2">

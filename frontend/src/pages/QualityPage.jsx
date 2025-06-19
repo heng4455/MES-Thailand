@@ -1,16 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { 
   CheckCircle, XCircle, AlertTriangle, BarChart3, 
   FileText, Calendar, User, Search, Filter, Plus, 
-  ClipboardCheck, Download
+  ClipboardCheck, Download, Settings, Database, 
+  Shield, Tags, Edit2, Trash2
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Modal from '../components/Modal';
 import Toast from '../components/Toast';
+import { qualityAPI, productsAPI, usersAPI } from '../utils/supabase';
+import { useUser } from '../contexts/UserContext';
 
 const QualityPage = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { user, userProfile, hasPermission, PERMISSIONS } = useUser();
   const [selectedTab, setSelectedTab] = useState('inspection');
   const [selectedBatch, setSelectedBatch] = useState(null);
   const [showNewInspectionModal, setShowNewInspectionModal] = useState(false);
@@ -38,6 +44,26 @@ const QualityPage = () => {
   const [products, setProducts] = useState([]);
   const [inspectors, setInspectors] = useState([]);
 
+  // 권한 확인 (품질 관리 권한이 있는 사용자만 접근 가능)
+  const hasManagerAccess = () => {
+    if (!userProfile) return false;
+    
+    // 관리자 이메일 체크
+    if (user?.email === 'admin@mes-thailand.com' || 
+        user?.email === 'joon@coilmaster.com') {
+      return true;
+    }
+    
+    // MANAGE_QUALITY 권한 체크 또는 admin/manager 역할 체크
+    return hasPermission(PERMISSIONS.MANAGE_QUALITY) || 
+           userProfile.role === 'admin' || 
+           userProfile.role === 'manager';
+  };
+
+  // 품질 검사 데이터
+  const [qualityInspections, setQualityInspections] = useState([]);
+  const [defectStatistics, setDefectStatistics] = useState([]);
+
   const [formData, setFormData] = useState({
     product: '',
     totalQuantity: '',
@@ -61,8 +87,8 @@ const QualityPage = () => {
     { id: 'packaging', name: '포장 검사', description: '포장 상태, 라벨링 등 확인' }
   ];
 
-  // 불량 유형 옵션
-  const defectTypeOptions = [
+  // 불량 유형 옵션 (동적 로드)
+  const [defectTypeOptions, setDefectTypeOptions] = useState([
     { id: 'soldering', name: '납땜 불량', description: '납땜 부족, 과다, 냉납땜 등' },
     { id: 'missing', name: '부품 누락', description: '필수 부품이 장착되지 않음' },
     { id: 'dimension', name: '치수 오차', description: '규격 치수를 벗어남' },
@@ -73,35 +99,69 @@ const QualityPage = () => {
     { id: 'marking', name: '마킹 불량', description: '인쇄, 각인 문제' },
     { id: 'alignment', name: '정렬 불량', description: '부품 위치, 각도 오차' },
     { id: 'electrical', name: '전기적 불량', description: '전압, 전류, 저항값 이상' }
-  ];
+  ]);
 
   // 제품 데이터 로드
   const loadProducts = async () => {
-    const mockProducts = [
-      { id: 1, productCode: 'CMI-CDSS4018NH-4R7M', productName: 'Power Inductor 4.7μH', client: 'MOBIS' },
-      { id: 2, productCode: 'CMI-CDSS4018NH-6R8M', productName: 'Power Inductor 6.8μH', client: 'MOBIS' },
-      { id: 3, productCode: 'CMI-CMPP6030HL-6R8M-N', productName: 'Coupled Inductor 6.8μH', client: 'MOBIS' },
-      { id: 4, productCode: 'CMI-CSSP12080NF-221M', productName: 'Shield Power Inductor 220μH', client: 'MOBIS' },
-      { id: 5, productCode: 'CME-CSCF3225B-100T30-A', productName: 'Common Mode Choke 100μH', client: 'HL Clemove' },
-      { id: 6, productCode: 'CMI-CMPP4020HL-1ROM', productName: 'Coupled Inductor 1.0μH', client: 'LG VS' },
-      { id: 7, productCode: 'CMI-CMPP5030HL-1ROM', productName: 'Coupled Inductor 1.0μH', client: 'LG VS' },
-      { id: 8, productCode: 'CMI-CMPP5030HL-220M', productName: 'Coupled Inductor 22μH', client: 'LG VS' },
-      { id: 9, productCode: 'CMI-CDSS5040NH-220M', productName: 'Power Inductor 22μH', client: 'LG VS' }
-    ];
-    setProducts(mockProducts);
+    try {
+      const result = await productsAPI.getAll();
+      if (result.success) {
+        setProducts(result.data);
+      } else {
+        showToast('제품 데이터 로드 실패', 'error');
+      }
+    } catch (error) {
+      console.error('제품 데이터 로드 오류:', error);
+      showToast('제품 데이터 로드 중 오류가 발생했습니다.', 'error');
+    }
   };
 
   // 검사자 데이터 로드
   const loadInspectors = async () => {
-    const mockInspectors = [
-      { id: 1, name: '김품질', department: '품질관리부', level: '선임검사자', certification: 'QC Level 3' },
-      { id: 2, name: '박검사', department: '품질관리부', level: '검사자', certification: 'QC Level 2' },
-      { id: 3, name: '이품질', department: '품질관리부', level: '주임검사자', certification: 'QC Level 3' },
-      { id: 4, name: '정검증', department: '품질관리부', level: '검사자', certification: 'QC Level 2' },
-      { id: 5, name: '최품관', department: '품질관리부', level: '책임검사자', certification: 'QC Level 4' },
-      { id: 6, name: '윤측정', department: '품질관리부', level: '검사자', certification: 'QC Level 1' }
-    ];
-    setInspectors(mockInspectors);
+    try {
+      const result = await usersAPI.getAllUsers();
+      if (result.success) {
+        // QC 부서의 활성 사용자만 필터링
+        const qcInspectors = result.data
+          .filter(user => user.approval_status === 'approved' && user.is_active)
+          .map(user => ({
+            id: user.id,
+            name: user.full_name || user.email,
+            department: user.department || '품질관리부',
+            level: user.position || '검사자',
+            certification: user.certification || 'QC Level 1'
+          }));
+        setInspectors(qcInspectors);
+      } else {
+        showToast('검사자 데이터 로드 실패', 'error');
+      }
+    } catch (error) {
+      console.error('검사자 데이터 로드 오류:', error);
+      showToast('검사자 데이터 로드 중 오류가 발생했습니다.', 'error');
+    }
+  };
+
+  // 품질 유형 데이터 로드
+  const loadQualityTypes = async () => {
+    try {
+      const result = await qualityAPI.getActiveQualityTypes();
+      if (result.success) {
+        const activeTypes = result.data.map(type => ({
+          id: type.id,
+          name: type.name,
+          description: type.description
+        }));
+        setDefectTypeOptions(activeTypes);
+        console.log('품질 유형 데이터 로드 성공:', activeTypes.length, '개');
+      } else {
+        console.error('품질 유형 데이터 로드 실패:', result.error);
+        // 기존 하드코딩된 데이터 유지
+      }
+    } catch (error) {
+      console.error('품질 유형 데이터 로드 오류:', error);
+      showToast('품질 유형 데이터 로드 중 오류가 발생했습니다.', 'error');
+      // 기존 하드코딩된 데이터 유지
+    }
   };
 
   useEffect(() => {
@@ -109,7 +169,9 @@ const QualityPage = () => {
       setLoading(true);
       await Promise.all([
         loadProducts(),
-        loadInspectors()
+        loadInspectors(),
+        loadQualityData(),
+        loadQualityTypes()
       ]);
       setLoading(false);
     };
@@ -502,87 +564,113 @@ const QualityPage = () => {
     }
   };
 
-  // 품질 검사 데이터
-  const qualityInspections = [
-    {
-      id: 'QC-2024-0616-001',
-      batchNo: 'CM-QC-241216-0001-CDSS',
-      product: 'CMI-CDSS4018NH-4R7M - Power Inductor 4.7μH',
-      quantity: 500,
-      inspected: 50,
-      passed: 47,
-      failed: 3,
-      inspector: '김품질',
-      date: '2024-12-16',
-      time: '09:30',
-      status: 'completed',
-      defectTypes: [
-        { type: t('quality.solderingDefect'), count: 2 },
-        { type: t('quality.missingComponent'), count: 1 }
-      ],
-      testResults: {
-        electrical: { status: 'pass', value: '95.2%' },
-        mechanical: { status: 'pass', value: '98.1%' },
-        thermal: { status: 'fail', value: '85.3%' },
-        visual: { status: 'pass', value: '94.0%' }
+  // 품질 검사 데이터 로드 (개선된 에러 핸들링)
+  const loadQualityData = async () => {
+    try {
+      console.log('🔄 품질 검사 데이터 로드 시작...');
+      
+      const result = await qualityAPI.getAll();
+      
+      // 성공적으로 데이터를 가져온 경우 (뷰 또는 폴백 쿼리)
+      if (result.success && result.data) {
+        console.log('✅ 품질 데이터 로드 성공:', result.data.length, '개');
+        
+        // 품질 검사 데이터 가공
+        const processedData = result.data.map(item => ({
+          id: `QC-${item.id}`,
+          batchNo: item.batch_number || item.batch_no || `CM-QC-${Date.now()}`,
+          product: item.product_name || 'N/A',
+          productCode: item.product_code || '',
+          quantity: item.total_quantity || 0,
+          inspected: item.inspection_quantity || 0,
+          passed: item.passed_quantity || 0,
+          failed: item.failed_quantity || 0,
+          inspector: item.inspector_name || 'N/A',
+          inspectorEmail: item.inspector_email || '',
+          date: item.inspection_datetime ? new Date(item.inspection_datetime).toLocaleDateString() : new Date().toLocaleDateString(),
+          time: item.inspection_datetime ? new Date(item.inspection_datetime).toLocaleTimeString() : new Date().toLocaleTimeString(),
+          status: item.status || 'in-progress',
+          orderNumber: item.order_number || '',
+          category: item.category || '',
+          client: item.client || '',
+          defectTypes: (() => {
+            try {
+              return item.defect_types ? JSON.parse(item.defect_types) : [];
+            } catch {
+              return [];
+            }
+          })(),
+          testResults: (() => {
+            try {
+              return item.test_results ? JSON.parse(item.test_results) : {
+                electrical: { status: 'pass', value: '95%' },
+                mechanical: { status: 'pass', value: '95%' },
+                thermal: { status: 'pass', value: '95%' },
+                visual: { status: 'pass', value: '95%' }
+              };
+            } catch {
+              return {
+                electrical: { status: 'pass', value: '95%' },
+                mechanical: { status: 'pass', value: '95%' },
+                thermal: { status: 'pass', value: '95%' },
+                visual: { status: 'pass', value: '95%' }
+              };
+            }
+          })()
+        }));
+        
+        setQualityInspections(processedData);
+        calculateDefectStatistics(processedData);
+        
+        if (processedData.length === 0) {
+          showToast('품질 검사 데이터가 없습니다.', 'info');
+        } else {
+          showToast(`${processedData.length}개의 품질 검사 데이터를 로드했습니다.`, 'success');
+        }
+      } else {
+        // 데이터 로드 실패 시 빈 배열로 설정
+        console.log('⚠️ 품질 데이터 로드 실패, 빈 상태로 설정');
+        setQualityInspections([]);
+        setDefectStatistics([]);
+        showToast('품질 데이터를 불러올 수 없습니다. 데이터베이스 연결을 확인해주세요.', 'warning');
       }
-    },
-    {
-      id: 'QC-2024-0616-002',
-      batchNo: 'CM-QC-241216-0002-CMPP',
-      product: 'CMI-CMPP4020HL-1ROM - Coupled Inductor 1.0μH',
-      quantity: 300,
-      inspected: 30,
-      passed: 29,
-      failed: 1,
-      inspector: '박검사',
-      date: '2024-12-16',
-      time: '11:15',
-      status: 'completed',
-      defectTypes: [
-        { type: t('quality.dimensionError'), count: 1 }
-      ],
-      testResults: {
-        electrical: { status: 'pass', value: '97.8%' },
-        mechanical: { status: 'pass', value: '96.5%' },
-        thermal: { status: 'pass', value: '92.1%' },
-        visual: { status: 'pass', value: '98.2%' }
-      }
-    },
-    {
-      id: 'QC-2024-0616-003',
-      batchNo: 'CM-QC-241216-0003-CSCF',
-      product: 'CME-CSCF3225B-100T30-A - Common Mode Choke 100μH',
-      quantity: 200,
-      inspected: 20,
-      passed: 18,
-      failed: 2,
-      inspector: '이품질',
-      date: '2024-12-16',
-      time: '14:45',
-      status: 'in-progress',
-      defectTypes: [
-        { type: t('quality.surfaceDefect'), count: 1 },
-        { type: t('quality.connectionDefect'), count: 1 }
-      ],
-      testResults: {
-        electrical: { status: 'pass', value: '93.7%' },
-        mechanical: { status: 'pass', value: '95.2%' },
-        thermal: { status: 'pass', value: '88.9%' },
-        visual: { status: 'fail', value: '89.1%' }
-      }
+    } catch (error) {
+      console.error('품질 데이터 로드 오류:', error);
+      
+      // 오류 발생 시에도 빈 배열로 설정하여 페이지가 깨지지 않도록 함
+      setQualityInspections([]);
+      setDefectStatistics([]);
+      
+      showToast(`품질 데이터 로드 실패: ${error.message}`, 'error');
     }
-  ];
+  };
 
-  // 불량률 통계 데이터
-  const defectStatistics = [
-    { category: t('quality.solderingDefect'), count: 15, percentage: 35.7 },
-    { category: t('quality.missingComponent'), count: 8, percentage: 19.0 },
-    { category: t('quality.dimensionError'), count: 7, percentage: 16.7 },
-    { category: t('quality.surfaceDefect'), count: 6, percentage: 14.3 },
-    { category: t('quality.connectionDefect'), count: 4, percentage: 9.5 },
-    { category: t('quality.others'), count: 2, percentage: 4.8 }
-  ];
+  // 불량 통계 계산
+  const calculateDefectStatistics = (inspections) => {
+    const defectCounts = {};
+    let totalDefects = 0;
+    
+    inspections.forEach(inspection => {
+      if (inspection.defectTypes && Array.isArray(inspection.defectTypes)) {
+        inspection.defectTypes.forEach(defect => {
+          if (defect.type) {
+            defectCounts[defect.type] = (defectCounts[defect.type] || 0) + (defect.count || 1);
+            totalDefects += (defect.count || 1);
+          }
+        });
+      }
+    });
+    
+    const statistics = Object.entries(defectCounts)
+      .map(([category, count]) => ({
+        category,
+        count,
+        percentage: totalDefects > 0 ? ((count / totalDefects) * 100) : 0
+      }))
+      .sort((a, b) => b.count - a.count);
+    
+    setDefectStatistics(statistics);
+  };
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -767,6 +855,22 @@ const QualityPage = () => {
             >
               {t('quality.reports')}
             </button>
+            <button
+              onClick={() => setSelectedTab('quality-types')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                selectedTab === 'quality-types'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              품질 유형 관리
+            </button>
+            {/* 임시 디버깅 정보 */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="text-xs text-gray-400 mt-2">
+                역할: {userProfile?.role} | 권한: {hasPermission(PERMISSIONS.MANAGE_QUALITY) ? 'O' : 'X'} | 표시: {hasManagerAccess() ? 'O' : 'X'}
+              </div>
+            )}
           </nav>
         </div>
 
@@ -1020,6 +1124,10 @@ const QualityPage = () => {
                 </div>
               </div>
             </div>
+          )}
+
+          {selectedTab === 'quality-types' && (
+            <QualityTypesContent />
           )}
         </div>
       </motion.div>
@@ -1577,6 +1685,501 @@ const QualityPage = () => {
                   <span>{t('quality.generateReportBtn')}</span>
                 </>
               )}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* 토스트 알림 */}
+      <Toast
+        isVisible={toast.isVisible}
+        message={toast.message}
+        type={toast.type}
+        onClose={hideToast}
+      />
+    </div>
+  );
+};
+
+// 품질 유형 관리 컴포넌트
+const QualityTypesContent = () => {
+  const { t } = useTranslation();
+  const { user, userProfile, hasPermission, PERMISSIONS } = useUser();
+  const [loading, setLoading] = useState(true);
+  const [qualityTypes, setQualityTypes] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [modalMode, setModalMode] = useState('add'); // 'add' or 'edit'
+  const [selectedType, setSelectedType] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+
+  // 토스트 상태
+  const [toast, setToast] = useState({
+    isVisible: false,
+    message: '',
+    type: 'info'
+  });
+
+  // 폼 데이터 - 한국어, 영어만 사용
+  const [formData, setFormData] = useState({
+    name: '',
+    nameEn: '',
+    description: '',
+    category: 'defect',
+    severity: 'medium',
+    isActive: true
+  });
+
+  // 카테고리 옵션
+  const categoryOptions = [
+    { value: 'defect', label: '불량' },
+    { value: 'dimension', label: '치수' },
+    { value: 'electrical', label: '전기적' },
+    { value: 'mechanical', label: '기계적' },
+    { value: 'visual', label: '외관' },
+    { value: 'functional', label: '기능적' }
+  ];
+
+  // 심각도 옵션
+  const severityOptions = [
+    { value: 'low', label: '낮음', color: 'text-green-600 bg-green-100' },
+    { value: 'medium', label: '보통', color: 'text-yellow-600 bg-yellow-100' },
+    { value: 'high', label: '높음', color: 'text-red-600 bg-red-100' },
+    { value: 'critical', label: '심각', color: 'text-red-700 bg-red-200' }
+  ];
+
+  // 데이터 로드
+  const loadQualityTypes = async () => {
+    try {
+      setLoading(true);
+      const result = await qualityAPI.getQualityTypes();
+      if (result.success) {
+        setQualityTypes(result.data);
+      } else {
+        console.error('품질 유형 API 오류:', result.error);
+        setQualityTypes([]);
+        showToast('품질 유형 테이블이 생성되지 않았습니다. 관리자에게 문의하세요.', 'warning');
+      }
+    } catch (error) {
+      console.error('품질 유형 로드 오류:', error);
+      setQualityTypes([]);
+      showToast('품질 유형 데이터 로드 중 오류가 발생했습니다.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user && userProfile) {
+      loadQualityTypes();
+    }
+  }, [user, userProfile]);
+
+  // 검색 필터링
+  const filteredTypes = qualityTypes.filter(type =>
+    type.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (type.nameEn && type.nameEn.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (type.description && type.description.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  // 토스트 표시
+  const showToast = (message, type = 'info') => {
+    setToast({
+      isVisible: true,
+      message,
+      type
+    });
+  };
+
+  // 토스트 숨기기
+  const hideToast = () => {
+    setToast(prev => ({ ...prev, isVisible: false }));
+  };
+
+  // 폼 입력 처리
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  // 새 품질 유형 추가
+  const handleAdd = () => {
+    setModalMode('add');
+    setFormData({
+      name: '',
+      nameEn: '',
+      description: '',
+      category: 'defect',
+      severity: 'medium',
+      isActive: true
+    });
+    setShowModal(true);
+  };
+
+  // 품질 유형 수정
+  const handleEdit = (type) => {
+    setModalMode('edit');
+    setSelectedType(type);
+    setFormData({
+      name: type.name,
+      nameEn: type.nameEn || '',
+      description: type.description || '',
+      category: type.category,
+      severity: type.severity,
+      isActive: type.isActive
+    });
+    setShowModal(true);
+  };
+
+  // 품질 유형 삭제 확인
+  const handleDeleteConfirm = (type) => {
+    setDeleteTarget(type);
+    setShowDeleteConfirm(true);
+  };
+
+  // 품질 유형 저장
+  const handleSave = async () => {
+    try {
+      if (!formData.name.trim()) {
+        showToast('유형명(한국어)은 필수입니다.', 'error');
+        return;
+      }
+
+      let result;
+      if (modalMode === 'add') {
+        result = await qualityAPI.createQualityType(formData);
+        if (result.success) {
+          setQualityTypes(prev => [result.data, ...prev]);
+          showToast('품질 유형이 성공적으로 추가되었습니다.', 'success');
+        } else {
+          showToast('저장 중 오류가 발생했습니다.', 'error');
+          return;
+        }
+      } else {
+        result = await qualityAPI.updateQualityType(selectedType.id, formData);
+        if (result.success) {
+          setQualityTypes(prev => prev.map(type =>
+            type.id === selectedType.id ? result.data : type
+          ));
+          showToast('품질 유형이 성공적으로 수정되었습니다.', 'success');
+        } else {
+          showToast('저장 중 오류가 발생했습니다.', 'error');
+          return;
+        }
+      }
+      setShowModal(false);
+    } catch (error) {
+      console.error('저장 오류:', error);
+      showToast('저장 중 오류가 발생했습니다.', 'error');
+    }
+  };
+
+  // 품질 유형 삭제
+  const handleDelete = async () => {
+    try {
+      const result = await qualityAPI.deleteQualityType(deleteTarget.id);
+      if (result.success) {
+        setQualityTypes(prev => prev.filter(type => type.id !== deleteTarget.id));
+        showToast('품질 유형이 삭제되었습니다.', 'success');
+      } else {
+        showToast('삭제 중 오류가 발생했습니다.', 'error');
+      }
+    } catch (error) {
+      console.error('삭제 오류:', error);
+      showToast('삭제 중 오류가 발생했습니다.', 'error');
+    } finally {
+      setShowDeleteConfirm(false);
+      setDeleteTarget(null);
+    }
+  };
+
+  // 심각도 배지 렌더링
+  const renderSeverityBadge = (severity) => {
+    const option = severityOptions.find(opt => opt.value === severity);
+    return (
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${option?.color || 'text-gray-600 bg-gray-100'}`}>
+        {option?.label || severity}
+      </span>
+    );
+  };
+
+  // 카테고리 배지 렌더링
+  const renderCategoryBadge = (category) => {
+    const option = categoryOptions.find(opt => opt.value === category);
+    return (
+      <span className="px-2 py-1 rounded-full text-xs font-medium text-blue-600 bg-blue-100">
+        {option?.label || category}
+      </span>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+          <div className="space-y-3">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-16 bg-gray-200 rounded"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* 헤더 */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-800">품질 유형 관리</h3>
+          <p className="text-sm text-gray-600 mt-1">불량 유형 및 검사 항목을 관리합니다</p>
+        </div>
+        <button
+          onClick={handleAdd}
+          className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          <span>새 유형 추가</span>
+        </button>
+      </div>
+
+      {/* 검색 */}
+      <div className="flex items-center space-x-4">
+        <div className="relative flex-1">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="품질 유형 검색..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+      </div>
+
+      {/* 품질 유형 목록 */}
+      <div className="space-y-3">
+        {filteredTypes.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+            <p>등록된 품질 유형이 없습니다.</p>
+            <button
+              onClick={handleAdd}
+              className="mt-2 text-blue-600 hover:text-blue-700"
+            >
+              첫 번째 품질 유형을 추가해보세요
+            </button>
+          </div>
+        ) : (
+          filteredTypes.map((type) => (
+            <motion.div
+              key={type.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <h4 className="font-semibold text-gray-800">{type.name}</h4>
+                    {type.nameEn && (
+                      <span className="text-sm text-gray-500">({type.nameEn})</span>
+                    )}
+                    <div className="flex items-center space-x-2">
+                      {renderCategoryBadge(type.category)}
+                      {renderSeverityBadge(type.severity)}
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        type.isActive 
+                          ? 'text-green-600 bg-green-100' 
+                          : 'text-gray-600 bg-gray-100'
+                      }`}>
+                        {type.isActive ? '활성' : '비활성'}
+                      </span>
+                    </div>
+                  </div>
+                  {type.description && (
+                    <p className="text-sm text-gray-600">{type.description}</p>
+                  )}
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => handleEdit(type)}
+                    className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteConfirm(type)}
+                    className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          ))
+        )}
+      </div>
+
+      {/* 추가/수정 모달 */}
+      <Modal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        title={modalMode === 'add' ? '새 품질 유형 추가' : '품질 유형 수정'}
+        size="lg"
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                유형명(한국어) *
+              </label>
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="예: 납땜 불량"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                유형명(영어)
+              </label>
+              <input
+                type="text"
+                name="nameEn"
+                value={formData.nameEn}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="예: Soldering Defect"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              설명
+            </label>
+            <textarea
+              name="description"
+              value={formData.description}
+              onChange={handleInputChange}
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="품질 유형에 대한 자세한 설명을 입력하세요"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                카테고리
+              </label>
+              <select
+                name="category"
+                value={formData.category}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {categoryOptions.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                심각도
+              </label>
+              <select
+                name="severity"
+                value={formData.severity}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {severityOptions.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                name="isActive"
+                checked={formData.isActive}
+                onChange={handleInputChange}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <span className="text-sm font-medium text-gray-700">활성 상태</span>
+            </label>
+          </div>
+
+          <div className="flex justify-end space-x-3 pt-4">
+            <button
+              onClick={() => setShowModal(false)}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+            >
+              취소
+            </button>
+            <button
+              onClick={handleSave}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              {modalMode === 'add' ? '추가' : '수정'}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* 삭제 확인 모달 */}
+      <Modal
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        title="품질 유형 삭제"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-red-100 text-red-600 rounded-lg">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="font-medium text-gray-800">정말로 삭제하시겠습니까?</p>
+              <p className="text-sm text-gray-600">
+                '{deleteTarget?.name}' 유형을 삭제하면 복구할 수 없습니다.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-3 pt-4">
+            <button
+              onClick={() => setShowDeleteConfirm(false)}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+            >
+              취소
+            </button>
+            <button
+              onClick={handleDelete}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+            >
+              삭제
             </button>
           </div>
         </div>
