@@ -1,5 +1,6 @@
 const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const isDev = process.env.NODE_ENV === 'development';
 
 // 보안 경고 억제 (개발 환경에서만)
@@ -37,11 +38,125 @@ function createWindow() {
   // 개발 환경에서는 HTML의 간단한 CSP만 사용
 
   // 애플리케이션 로드
-  const startUrl = isDev 
-    ? 'http://localhost:3000' 
-    : `file://${path.join(__dirname, '../build/index.html')}`;
+  let startUrl;
   
-  mainWindow.loadURL(startUrl);
+  if (isDev) {
+    startUrl = 'http://localhost:3000';
+  } else {
+    // 프로덕션 환경에서 build 폴더 찾기
+    const buildPath = path.join(__dirname, '..', 'build', 'index.html');
+    startUrl = `file://${buildPath}`;
+  }
+  
+  console.log('Loading URL:', startUrl);
+  console.log('__dirname:', __dirname);
+  console.log('Process cwd:', process.cwd());
+  console.log('App path:', app.getAppPath());
+  console.log('Resources path:', process.resourcesPath);
+  
+  // 여러 경로 확인
+  const possiblePaths = [
+    path.join(__dirname, '..', 'build', 'index.html'),
+    path.join(process.cwd(), 'build', 'index.html'),
+    path.join(app.getAppPath(), 'build', 'index.html'),
+    path.join(process.resourcesPath, 'app', 'build', 'index.html')
+  ];
+  
+  console.log('Checking possible paths:');
+  possiblePaths.forEach((p, i) => {
+    console.log(`${i + 1}. ${p} - exists: ${fs.existsSync(p)}`);
+  });
+  
+  mainWindow.loadURL(startUrl).catch((error) => {
+    console.error('Failed to load URL:', error);
+    
+    // 존재하는 첫 번째 경로 사용
+    for (const testPath of possiblePaths) {
+      if (fs.existsSync(testPath)) {
+        const fallbackUrl = `file://${testPath}`;
+        console.log(`Using fallback URL: ${fallbackUrl}`);
+        mainWindow.loadURL(fallbackUrl);
+        break;
+      }
+    }
+  });
+
+  // 로드 완료 이벤트 추가
+  mainWindow.webContents.on('did-finish-load', () => {
+    console.log('Content loaded successfully');
+  });
+
+  // 로드 실패 이벤트 추가
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+    console.error('Failed to load content:', {
+      errorCode,
+      errorDescription,
+      validatedURL
+    });
+    
+    // 오류 페이지 표시
+    const errorHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>MES Thailand - Loading Error</title>
+        <style>
+          body { 
+            font-family: Arial, sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+          }
+          .error-container {
+            text-align: center;
+            background: rgba(0,0,0,0.3);
+            padding: 40px;
+            border-radius: 10px;
+            max-width: 500px;
+          }
+          h1 { color: #ff6b6b; margin-bottom: 20px; }
+          .error-details { 
+            background: rgba(0,0,0,0.2); 
+            padding: 15px; 
+            border-radius: 5px; 
+            margin: 20px 0;
+            font-family: monospace;
+            font-size: 12px;
+          }
+          button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+          }
+          button:hover { background: #45a049; }
+        </style>
+      </head>
+      <body>
+        <div class="error-container">
+          <h1>⚠️ Loading Error</h1>
+          <p>MES Thailand 애플리케이션을 로드하는 중 오류가 발생했습니다.</p>
+          <div class="error-details">
+            <strong>Error Code:</strong> ${errorCode}<br>
+            <strong>Description:</strong> ${errorDescription}<br>
+            <strong>URL:</strong> ${validatedURL}
+          </div>
+          <button onclick="location.reload()">다시 시도</button>
+          <button onclick="require('electron').ipcRenderer.send('open-dev-tools')">개발자 도구 열기</button>
+        </div>
+      </body>
+      </html>
+    `;
+    
+    mainWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(errorHtml)}`);
+  });
 
   // 개발 모드에서는 DevTools 자동 열기
   if (isDev) {
@@ -96,10 +211,6 @@ function createWindow() {
 
   // 개발 환경에서 에러 디버깅
   if (isDev) {
-    mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
-      console.log('Failed to load:', errorDescription, validatedURL);
-    });
-
     mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
       console.log(`Console [${level}]:`, message);
     });

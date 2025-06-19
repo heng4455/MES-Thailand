@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "MES Thailand Frontend - Electron + React App",
   "author": "MES Thailand Team",
-  "main": "public/electron.js",
+  "main": "electron/main.js",
   "homepage": "./",
   "private": true,
   "scripts": {
@@ -63,14 +63,15 @@
   "build": {
     "appId": "com.mesThailand.app",
     "productName": "MES Thailand",
+    "asar": false,
     "directories": {
       "output": "C:\\temp\\mes-build",
       "buildResources": "build-resources"
     },
     "files": [
       "build/**/*",
-      "public/electron.js",
-      "public/preload.js",
+      "electron/main.js",
+      "electron/preload.js",
       "node_modules/**/*",
       "!node_modules/.cache/**/*",
       "!node_modules/**/test/**/*",
@@ -79,7 +80,7 @@
       "!**/*.{iml,o,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,xproj}"
     ],
     "extraMetadata": {
-      "main": "public/electron.js"
+      "main": "electron/main.js"
     },
     "mac": {
       "category": "public.app-category.productivity",
