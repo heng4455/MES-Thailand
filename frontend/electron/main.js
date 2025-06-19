@@ -11,6 +11,202 @@ if (isDev) {
 // 메인 윈도우 레퍼런스
 let mainWindow;
 
+// 폴백 페이지 생성 함수
+function createFallbackPage() {
+  const fallbackHtml = `
+    <!DOCTYPE html>
+    <html lang="ko">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>MES Thailand</title>
+      <style>
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
+        
+        body {
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+        }
+        
+        .container {
+          text-align: center;
+          background: rgba(0,0,0,0.2);
+          padding: 60px 40px;
+          border-radius: 20px;
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255,255,255,0.1);
+          max-width: 500px;
+          animation: fadeIn 1s ease-in;
+        }
+        
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(30px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .logo {
+          width: 80px;
+          height: 80px;
+          background: rgba(255,255,255,0.1);
+          border-radius: 50%;
+          margin: 0 auto 30px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 32px;
+          border: 2px solid rgba(255,255,255,0.2);
+        }
+        
+        h1 {
+          font-size: 2.5em;
+          margin-bottom: 20px;
+          font-weight: 300;
+          letter-spacing: 2px;
+        }
+        
+        .subtitle {
+          font-size: 1.2em;
+          margin-bottom: 30px;
+          opacity: 0.8;
+          line-height: 1.6;
+        }
+        
+        .status {
+          background: rgba(255,255,255,0.1);
+          padding: 20px;
+          border-radius: 10px;
+          margin: 30px 0;
+          border-left: 4px solid #4CAF50;
+        }
+        
+        .loading {
+          display: inline-block;
+          width: 20px;
+          height: 20px;
+          border: 3px solid rgba(255,255,255,0.3);
+          border-radius: 50%;
+          border-top-color: #4CAF50;
+          animation: spin 1s ease-in-out infinite;
+          margin-right: 10px;
+        }
+        
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+        
+        .error-info {
+          background: rgba(255,107,107,0.2);
+          padding: 15px;
+          border-radius: 8px;
+          margin-top: 20px;
+          font-size: 0.9em;
+          border-left: 4px solid #ff6b6b;
+        }
+        
+        .retry-btn {
+          background: linear-gradient(45deg, #4CAF50, #45a049);
+          color: white;
+          border: none;
+          padding: 12px 30px;
+          border-radius: 25px;
+          cursor: pointer;
+          font-size: 1em;
+          margin: 20px 10px;
+          transition: all 0.3s ease;
+          box-shadow: 0 4px 15px rgba(76,175,80,0.3);
+        }
+        
+        .retry-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(76,175,80,0.4);
+        }
+        
+        .debug-btn {
+          background: linear-gradient(45deg, #2196F3, #1976D2);
+          color: white;
+          border: none;
+          padding: 8px 20px;
+          border-radius: 20px;
+          cursor: pointer;
+          font-size: 0.9em;
+          margin: 10px;
+          transition: all 0.3s ease;
+        }
+        
+        .version {
+          position: absolute;
+          bottom: 20px;
+          right: 20px;
+          font-size: 0.8em;
+          opacity: 0.6;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="logo">🏭</div>
+        <h1>MES Thailand</h1>
+        <div class="subtitle">Manufacturing Execution System</div>
+        
+        <div class="status">
+          <div class="loading"></div>
+          애플리케이션을 초기화하고 있습니다...
+        </div>
+        
+        <div class="error-info">
+          ⚠️ 빌드 파일을 로드하는 중 문제가 발생했습니다.<br>
+          앱을 다시 시작하거나 재설치를 시도해주세요.
+        </div>
+        
+        <button class="retry-btn" onclick="location.reload()">
+          🔄 다시 시도
+        </button>
+        
+        <button class="debug-btn" onclick="toggleDebug()">
+          🔧 디버그 정보
+        </button>
+        
+        <div id="debug-info" style="display: none; margin-top: 20px; font-size: 0.8em; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; text-align: left;">
+          <strong>디버그 정보:</strong><br>
+          Platform: ${process.platform}<br>
+          Arch: ${process.arch}<br>
+          Node.js: ${process.version}<br>
+          Electron: ${process.versions.electron}<br>
+          App Path: ${app.getAppPath()}<br>
+          Resources: ${process.resourcesPath}
+        </div>
+      </div>
+      
+      <div class="version">v1.0.0</div>
+      
+      <script>
+        function toggleDebug() {
+          const debugInfo = document.getElementById('debug-info');
+          debugInfo.style.display = debugInfo.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        // 자동 재시도 (5초 후)
+        setTimeout(() => {
+          location.reload();
+        }, 5000);
+      </script>
+    </body>
+    </html>
+  `;
+  
+  return `data:text/html;charset=utf-8,${encodeURIComponent(fallbackHtml)}`;
+}
+
 function createWindow() {
   // 메인 윈도우 생성
   mainWindow = new BrowserWindow({
@@ -42,42 +238,57 @@ function createWindow() {
   
   if (isDev) {
     startUrl = 'http://localhost:3000';
+    console.log('Development mode: Loading from localhost');
   } else {
     // 프로덕션 환경에서 build 폴더 찾기
-    const buildPath = path.join(__dirname, '..', 'build', 'index.html');
-    startUrl = `file://${buildPath}`;
+    const possiblePaths = [
+      path.join(__dirname, '..', 'build', 'index.html'),           // 일반적인 경로
+      path.join(process.cwd(), 'build', 'index.html'),             // 현재 작업 디렉토리
+      path.join(app.getAppPath(), 'build', 'index.html'),          // 앱 경로
+      path.join(process.resourcesPath, 'app', 'build', 'index.html'), // 패키지된 앱
+      path.join(process.resourcesPath, 'build', 'index.html'),     // 패키지된 앱 (간단한 경로)
+      path.join(__dirname, 'build', 'index.html'),                 // 같은 레벨
+      path.join(__dirname, '..', '..', 'build', 'index.html')      // 두 레벨 위
+    ];
+    
+    console.log('Production mode: Searching for build files...');
+    console.log('__dirname:', __dirname);
+    console.log('Process cwd:', process.cwd());
+    console.log('App path:', app.getAppPath());
+    console.log('Resources path:', process.resourcesPath);
+    
+    let buildPath = null;
+    console.log('Checking possible paths:');
+    
+    for (let i = 0; i < possiblePaths.length; i++) {
+      const testPath = possiblePaths[i];
+      const exists = fs.existsSync(testPath);
+      console.log(`${i + 1}. ${testPath} - exists: ${exists}`);
+      
+      if (exists && !buildPath) {
+        buildPath = testPath;
+        console.log(`✅ Found build file at: ${buildPath}`);
+      }
+    }
+    
+    if (buildPath) {
+      startUrl = `file://${buildPath}`;
+      console.log(`Loading from: ${startUrl}`);
+    } else {
+      console.error('❌ No build files found! Creating fallback...');
+      // 빌드 파일을 찾을 수 없는 경우 기본 HTML 생성
+      startUrl = createFallbackPage();
+    }
   }
-  
-  console.log('Loading URL:', startUrl);
-  console.log('__dirname:', __dirname);
-  console.log('Process cwd:', process.cwd());
-  console.log('App path:', app.getAppPath());
-  console.log('Resources path:', process.resourcesPath);
-  
-  // 여러 경로 확인
-  const possiblePaths = [
-    path.join(__dirname, '..', 'build', 'index.html'),
-    path.join(process.cwd(), 'build', 'index.html'),
-    path.join(app.getAppPath(), 'build', 'index.html'),
-    path.join(process.resourcesPath, 'app', 'build', 'index.html')
-  ];
-  
-  console.log('Checking possible paths:');
-  possiblePaths.forEach((p, i) => {
-    console.log(`${i + 1}. ${p} - exists: ${fs.existsSync(p)}`);
-  });
   
   mainWindow.loadURL(startUrl).catch((error) => {
     console.error('Failed to load URL:', error);
+    console.log('Attempting fallback loading...');
     
-    // 존재하는 첫 번째 경로 사용
-    for (const testPath of possiblePaths) {
-      if (fs.existsSync(testPath)) {
-        const fallbackUrl = `file://${testPath}`;
-        console.log(`Using fallback URL: ${fallbackUrl}`);
-        mainWindow.loadURL(fallbackUrl);
-        break;
-      }
+    if (!isDev) {
+      // 프로덕션에서 로딩 실패 시 폴백 페이지 표시
+      const fallbackUrl = createFallbackPage();
+      mainWindow.loadURL(fallbackUrl);
     }
   });
 
@@ -216,6 +427,19 @@ function createWindow() {
     });
   }
 }
+
+// IPC 핸들러 등록
+ipcMain.on('open-dev-tools', () => {
+  if (mainWindow) {
+    mainWindow.webContents.openDevTools();
+  }
+});
+
+ipcMain.on('reload-app', () => {
+  if (mainWindow) {
+    mainWindow.reload();
+  }
+});
 
 // 앱이 준비되면 윈도우 생성
 app.whenReady().then(() => {
