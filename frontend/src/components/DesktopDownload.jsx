@@ -35,11 +35,11 @@ const DesktopDownload = () => {
   // 다운로드 링크 - GitHub Releases에서 호스팅
   const downloadLinks = {
     windows: {
-      installer: 'https://github.com/heng4455/MES-Thailand/releases/download/v1.0.0/MES-Thailand-Installer-1.0.0.exe',
-      portable: 'https://github.com/heng4455/MES-Thailand/releases/download/v1.0.0/MES-Thailand-Portable-1.0.0.exe'
+      installer: 'https://github.com/heng4455/MES-Thailand/releases/download/Download/MES-Thailand-Installer-1.0.0.exe',
+      portable: 'https://github.com/heng4455/MES-Thailand/releases/download/V1.0.0/MES-Thailand-Portable-1.0.0.exe'
     },
-    mac: 'https://github.com/heng4455/MES-Thailand/releases/download/v1.0.0/MES-Thailand-1.0.0.dmg',
-    linux: 'https://github.com/heng4455/MES-Thailand/releases/download/v1.0.0/MES-Thailand-1.0.0.AppImage'
+    mac: 'https://github.com/heng4455/MES-Thailand/releases/download/V1.0.0/MES-Thailand-1.0.0.dmg',
+    linux: 'https://github.com/heng4455/MES-Thailand/releases/download/V1.0.0/MES-Thailand-1.0.0.AppImage'
   };
 
   const osNames = {
@@ -48,36 +48,31 @@ const DesktopDownload = () => {
     linux: 'Linux'
   };
 
-  const handleDownload = async (os, type = 'installer') => {
+  const handleDownload = (os, type = 'installer') => {
     setIsDownloading(true);
     
     try {
-      // 실제 파일 다운로드
-      const link = document.createElement('a');
-      
+      // GitHub 릴리스에서 직접 다운로드
+      let downloadUrl;
       if (os === 'windows') {
-        link.href = downloadLinks[os][type];
-        link.download = `MES-Thailand-${type === 'installer' ? 'Installer' : 'Portable'}-1.0.0.exe`;
+        downloadUrl = downloadLinks[os][type];
       } else {
-        link.href = downloadLinks[os];
-        link.download = `MES-Thailand-Setup-${os}.${os === 'mac' ? 'dmg' : 'AppImage'}`;
+        downloadUrl = downloadLinks[os];
       }
       
-      link.target = '_blank'; // 새 탭에서 열기
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      // 새 탭에서 바로 다운로드 링크로 이동
+      window.open(downloadUrl, '_blank');
       
-      // 성공 메시지와 설치 안내
+      // 성공 메시지
       setTimeout(() => {
         setIsDownloading(false);
         const message = type === 'portable' 
-          ? `포터블 버전 다운로드가 시작되었습니다!\n\n사용법:\n• 다운로드한 파일을 원하는 위치에 저장\n• 바로 실행하여 사용 (설치 불필요)\n• USB에 넣어서 이동 가능\n\n포터블 버전의 장점:\n• 설치 불필요\n• 시스템에 흔적 남지 않음\n• 이동식 저장장치에서 실행 가능`
-          : `설치 프로그램 다운로드가 시작되었습니다!\n\n설치 후 바탕화면에 "MES Thailand" 아이콘이 생성됩니다.\n\n데스크톱 앱의 장점:\n• 더 빠른 실행 속도\n• 오프라인 데이터 캐싱\n• 시스템 알림 지원\n• 멀티태스킹 환경 최적화`;
+          ? `포터블 버전 다운로드가 시작되었습니다!\n\n✅ SHA256: 0bbe63dfad826aa9ad10f77b6a042171d57aa130e2e654b21a02d207720be4d4\n\n사용법:\n• 다운로드한 파일을 원하는 위치에 저장\n• 바로 실행하여 사용 (설치 불필요)\n• USB에 넣어서 이동 가능`
+          : `설치 프로그램 다운로드가 시작되었습니다!\n\n✅ SHA256: 0bbe63dfad826aa9ad10f77b6a042171d57aa130e2e654b21a02d207720be4d4\n\n설치 후 바탕화면에 "MES Thailand" 아이콘이 생성됩니다.\n\n데스크톱 앱의 장점:\n• 더 빠른 실행 속도\n• 오프라인 데이터 캐싱\n• 시스템 알림 지원`;
         
         alert(message);
         setShowModal(false);
-      }, 1000);
+      }, 500);
       
     } catch (error) {
       console.error('Download error:', error);
