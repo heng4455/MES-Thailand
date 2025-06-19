@@ -36,10 +36,10 @@ const DesktopDownload = () => {
   const downloadLinks = {
     windows: {
       installer: 'https://github.com/heng4455/MES-Thailand/releases/download/Download/MES-Thailand-Installer-1.0.0.exe',
-      portable: 'https://github.com/heng4455/MES-Thailand/releases/download/V1.0.0/MES-Thailand-Portable-1.0.0.exe'
+      portable: 'https://github.com/heng4455/MES-Thailand/releases/download/Download/MES-Thailand-Portable-1.0.0.exe'
     },
-    mac: 'https://github.com/heng4455/MES-Thailand/releases/download/V1.0.0/MES-Thailand-1.0.0.dmg',
-    linux: 'https://github.com/heng4455/MES-Thailand/releases/download/V1.0.0/MES-Thailand-1.0.0.AppImage'
+    mac: 'https://github.com/heng4455/MES-Thailand/releases/download/Download/MES-Thailand-1.0.0.dmg',
+    linux: 'https://github.com/heng4455/MES-Thailand/releases/download/Download/MES-Thailand-1.0.0.AppImage'
   };
 
   const osNames = {
